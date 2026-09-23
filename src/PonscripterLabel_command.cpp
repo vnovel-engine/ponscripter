@@ -2062,7 +2062,7 @@ int PonscripterLabel::gettagCommand(const pstring& cmd)
     const char* buf = nest_infos.back().next_script;
     while (*buf == ' ' || *buf == '\t') buf++;
     int bytes;
-    if (zenkakko_flag && file_encoding->DecodeChar(buf, bytes) == 0x3010 /*y */)
+    if (zenkakko_flag && file_encoding->DecodeChar(buf, bytes) == 0x3010 /*ï¿½y */)
         buf += bytes;
     else if (*buf == '[')
         buf++;
@@ -2083,9 +2083,9 @@ int PonscripterLabel::gettagCommand(const pstring& cmd)
 	    int bytes = 1;
 	    while (*buf != '/' &&
 		   ((zenkakko_flag &&
-		     (file_encoding->DecodeChar(buf, bytes) != 0x3011 /* z*/)) ||
+		     (file_encoding->DecodeChar(buf, bytes) != 0x3011 /* ï¿½z*/)) ||
 		    (!zenkakko_flag &&
-             (file_encoding->DecodeChar(buf, bytes) != ']' /* z*/))))
+             (file_encoding->DecodeChar(buf, bytes) != ']' /* ï¿½z*/))))
 		buf += bytes;
 	    e.mutate(pstring(buf_start, buf - buf_start));
 	}
@@ -2096,7 +2096,7 @@ int PonscripterLabel::gettagCommand(const pstring& cmd)
     }
     while (more_args);
 
-    if (zenkakko_flag && file_encoding->DecodeChar(buf, bytes) == 0x3010 /*y */)
+    if (zenkakko_flag && file_encoding->DecodeChar(buf, bytes) == 0x3010 /*ï¿½y */)
 	buf += bytes;
     else if (*buf == ']') buf++;
 
@@ -3437,3 +3437,36 @@ int PonscripterLabel::allsp2hideCommand(const pstring& cmd)
 
     return RET_CONTINUE;
 }
+
+
+#ifdef __LIBRETRO__
+#include <stdio.h>
+
+int PonscripterLabel::snapshotsaveCommand(const pstring& /*cmd*/)
+{
+    pstring name = script_h.readStrValue();
+    if (name.length() > 0) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%s%s.bmp", (const char*)script_h.save_path,
+                 (const char*)name);
+        SDL_SaveBMP(screen_surface, path);
+    }
+    return RET_CONTINUE;
+}
+
+int PonscripterLabel::dumpstateCommand(const pstring& /*cmd*/)
+{
+    pstring name = script_h.readStrValue();
+    if (name.length() > 0) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%s%s.txt", (const char*)script_h.save_path,
+                 (const char*)name);
+        FILE *f = ::fopen(path, "w");
+        if (f) {
+            dumpState(f);
+            fclose(f);
+        }
+    }
+    return RET_CONTINUE;
+}
+#endif

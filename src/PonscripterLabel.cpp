@@ -262,6 +262,10 @@ sfunc_lut_t::sfunc_lut_t() {
     dict["saveoff"]          = &PonscripterLabel::saveoffCommand;
     dict["saveon"]           = &PonscripterLabel::saveonCommand;
     dict["savescreenshot"]   = &PonscripterLabel::savescreenshotCommand;
+#ifdef __LIBRETRO__
+    dict["snapshotsave"]     = &PonscripterLabel::snapshotsaveCommand;
+    dict["dumpstate"]        = &PonscripterLabel::dumpstateCommand;
+#endif
     dict["savescreenshot2"]  = &PonscripterLabel::savescreenshotCommand;
     dict["savetime"]         = &PonscripterLabel::savetimeCommand;
     dict["select"]           = &PonscripterLabel::selectCommand;
@@ -2018,3 +2022,34 @@ void PonscripterLabel::setSkipMode(bool mode)
 {
     skip_flag = mode;
 }
+
+#ifdef __LIBRETRO__
+#include <stdio.h>
+
+void PonscripterLabel::dumpState(FILE *f)
+{
+    // Dump all non-zero integer variables
+    fprintf(f, "# PONScripter state dump\n");
+    fprintf(f, "# Numeric variables (%%0-%%%d)\n", VARIABLE_RANGE - 1);
+    for (int i = 0; i < VARIABLE_RANGE; i++) {
+        int val = script_h.getVariableData(i).get_num();
+        if (val != 0)
+            fprintf(f, "%%%d:%d\n", i, val);
+    }
+
+    // Dump all non-empty string variables
+    fprintf(f, "# String variables ($0-$%d)\n", VARIABLE_RANGE - 1);
+    for (int i = 0; i < VARIABLE_RANGE; i++) {
+        pstring& str = script_h.getVariableData(i).str;
+        if (str.length() > 0)
+            fprintf(f, "$%d:%s\n", i, (const char*)str);
+    }
+
+    // Dump key engine flags
+    fprintf(f, "# Engine flags\n");
+    fprintf(f, "global_variable_border:%d\n", script_h.global_variable_border);
+    fprintf(f, "automode:%d\n", automode_flag ? 1 : 0);
+    fprintf(f, "skip:%d\n", skip_flag ? 1 : 0);
+    fprintf(f, "saveon:%d\n", saveon_flag ? 1 : 0);
+}
+#endif

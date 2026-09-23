@@ -106,6 +106,12 @@ public:
     bool isAutoMode() { return automode_flag; }
     bool isSkipMode() { return skip_flag; }
     void setDebugLevel(int level) { debug_level = level; }
+
+#ifdef __LIBRETRO__
+    void dumpState(FILE *f);
+    int snapshotsaveCommand(const pstring& cmd);
+    int dumpstateCommand(const pstring& cmd);
+#endif
    
     // ----------------------------------------
     // start-up options
