@@ -1,0 +1,566 @@
+2011-10-08
+
+  Hack to stop engine lockup at @ in text, when using textgosub [Mion]
+
+
+2011-10-06
+
+  Allow opening files with non-ASCII filenames [Mion]
+
+  Adding support for (unsaveable) variable numbers greater than 4096 [Mion]
+
+
+2010-10-23
+
+  Corrected "logsp" & "logsp2" to not skip whitespace, even in
+  unmarked text [Mion]
+
+
+2010-09-11
+
+  Allow changing the font file for a pmapfont slot [Mion]
+
+
+2010-05-02
+
+  Changed movie subtitle timing to be based on the movie stream's
+  "current time" instead of using an SDL Timer [Mion]
+
+
+2010-04-28
+
+  More bugfixes for text refresh [Mion]
+
+  Converting gameid to system ANSI on Windows when creating the
+  save path (will be changed to handle non-ANSI Unicode once non-ASCII
+  filename support is added) [Mion]
+
+
+2010-04-15
+
+  Bugfix for looped ogg bgm playback [Mion]
+
+  Fixes to text refresh when wait_time is 0 [Mion]
+
+  Little hack to word-wrap code in order to fix the
+  "space at start of wrapped line" issue on click-to-wait [Mion]
+
+
+2010-03-28
+
+  Little fixes to paths handling [Mion]
+
+  Cleared ctrl-press after a movie [Mion]
+
+  Fix for text output "skip to end of line/wait on click" for Mac;
+  also grafted additional skip/wait/delay handling from ons-en [Mion]
+
+
+2010-03-24
+
+  Changed basic functionality on Windows: stdout.txt & stderr.txt will
+  go under the current user's AppData instead of AllUsers' from now on [Mion]
+
+  Added "shell" cmd [Mion]
+
+  Grafted nicer non-ASCII Windows caption handling from ons-en [Mion]
+
+  Some Mac fixes related to "debug_string" [Roto]
+
+
+2010-03-11
+
+  Updated bstrlib (used for pstring type) [Mion]
+
+  Fixed memory leaks and uninitialized variables [Mion & Andrius]
+
+  Grafted recent (and some not-so-recent) small fixes from ons-en [Mion]
+
+  Added Mac app bundle handling [Mion & Roto]
+
+
+2010-03-08
+
+  Fix for the enormously slow startup time for Umineko (caused by
+  unnecessarily decompressing all bitmaps to find their lengths) [Mion & Roto]
+
+  Added support for "pns.cfg" file containing command-line options [Mion]
+
+  Grafted "--gameid", "--current-user-appdata", "--disable-cpu-gfx"
+  command-line option support from ons-en [Mion]
+
+
+2010-03-06
+
+  Corrections for building on non-gcc compilers; fixes for
+  gcc4.5+ compilation, added strict compilation option [Andrius & Mion]
+
+  Plugged icon-related memory leak [Roto & Mion]
+
+  Various small bugfixes [Mion]
+
+
+2010-02-28
+
+  Fixed memory leak in BaseReader [Roto]
+
+
+2010-02-19
+
+  Pretextgosub-related fixes (also for "gettag" cmd) [Mion]
+
+
+2010-02-17
+
+  Various bugfixes; cleaned up custom build process, added "--no-cpu-gfx"
+  configure option [Mion]
+
+
+2010-02-14
+  
+  Fixed case in which there's a folder in the game's search path with the
+  same name as a directory in the archive [Mion & Roto]
+
+  Bugfix for Mac file reading issue [Mion]
+
+
+2010-02-05
+  
+  Ported audio fixes from ons-en, added "mode_wave_demo" cmd [Mion]
+
+  Bugfix for alpha png images, various other bugfixes [Mion]
+
+
+2010-01-20
+  
+  Began porting image processing routines from ons-en [Mion]
+
+
+2010-01-15
+  
+  Updated XCode for 10.6, added DirPath support [Roto]
+
+
+2009-10-15
+
+  Check entire DirPath for font files [Mion]
+
+  Remove every UTF-8 BOM as the script file is read [Mion]
+
+  Removed default indent and break chars (except for break on space);
+  added "basic" option to "pindentstr" and "pbreakstr", which will restore
+  those defaults (e.g. use "pindentstr basic") [Mion]
+  
+  various bugfixes [Mion]
+
+
+2009-10-13
+
+  Added "localestring" command and locale handling [Mion]
+
+  Corrected right-click menus for compatibility mode [Mion]
+
+
+2009-10-08
+
+  Bugfix for digit character handling [Mion]
+
+
+2009-10-07
+
+  Fixed several format string issues with debug messages that were breaking the
+  Linux build [Roto]
+
+  Fixed a bug in the default save/load menu [Mion]
+
+
+2009-10-03
+
+  Corrected ligature handling to work with multi-byte matching characters [Mion]
+
+  Corrected "setwindow" textwindow dimension handling (should use right/bottom
+  positions, not width & height, for the final 2 parameters) [Mion]
+
+  Reimplemented indenting; preliminary support for vertical and right-to-left
+  text ("tateyoko" and "bidirect" commands) [Mion]
+
+
+2009-09-26
+
+  Added DirPaths feature, allowing multiple directories as the "root" [Mion]
+
+
+2009-09-16
+
+  Various bugfixes; added "savegame2" command [Mion]
+
+
+2009-08-23
+
+  Added XCode project for Mac OS X compilation [Roto]
+
+
+2009-07-07
+
+  Various bugfixes [Mion]
+
+
+2009-02-07
+
+  Ligature selection is no longer dependent on the order of
+  definition, and a saner data structure is used.
+
+
+2009-01-20
+
+  Refactor documentation, and translate it to DocBook to make HTML
+  generation easier.
+
+
+2009-01-18
+
+  Refactor source tree into something sane.
+
+  Improve Vista support.
+
+  Add packaging support for RPM- and DEB-based Linux distributions.
+
+
+2008-12-29
+
+  Tweak script filename detection.
+
+  Define #@, #_, etc by default.
+
+
+2008-12-28
+
+  Implement variable interpolation in text lines, with the syntax
+  {$var}, {%var}, {?var[0]}.  {|$ etc can be used if literal output is
+  required.
+
+  Remove altogether the distinction between END_1BYTE_CHAR and other
+  end states.  The only thing it was doing was causing whitespace to
+  be ignored (often unexpectedly) when printing text.
+
+  Add a command-line option to specify a script filename.  Among other
+  things, this will make it much easier to have a range of different
+  test scripts.  The relatively unimportant -s flag has been
+  repurposed for this; the old -s can still be accessed with its long
+  name --save.
+
+
+2008-12-26
+
+  Write some manpages at last.
+
+  Fix `puttext' command.
+
+  The distinction between string literal quoting types is now clearly
+  defined: ~tags~ are parsed in ^...^ strings, and treated as literal
+  in "..." strings.  "^..." strings are treated identically to "..."
+  strings.  There is no other difference in behaviour whatsoever.
+
+  
+2008-12-19
+
+  New command `watch_var' logs all changes to an (integer) variable,
+  so you can figure out why on earth it's got the wrong value.
+
+
+2008-12-16
+
+  Fix occasional segfaults during subtitled movies.  This is a quick
+  and dirty fix, and should ideally be replaced with something more
+  robust.
+
+
+2008-12-14
+
+  Fix infinite loop caused by a line of the form "^\n" when a
+  pretextgosub hook is defined.
+
+  Make @ behave as expected when embedded in lines, even when a
+  textgosub hook is defined.
+
+  Add shortcuts #@, #\, etc, for printing literal characters.
+
+  Add ponscripter-mode.el (Emacs syntax highlighting)
+
+
+2008-11-18
+
+  Fix fatal error caused by ~~ in a script becoming ~ in the lookback
+  buffer.
+
+
+2008-09-09
+
+  New command `vsp_when' allows sprite visibility to be linked
+  automatically to auto-mode status.
+
+  Fix auto-mode so that all sprites start animating again immediately
+  when the player terminates auto-mode during a page pause.
+
+  Hack SDL to add a fixed-aspect-ratio mode for widescreen displays.
+
+
+2008-03-26
+
+  Add h_textheight command to facilitate footnote positioning in
+  Narci2.
+
+  h_locate now adds the equivalent of ~x...y...~ to the lookback
+  buffer, so pages using it will appear correctly in lookback mode.
+
+  Add gettextspeed command to determine the current text speed.
+
+  Tweak line wrapping code; formatting commands no longer count as
+  break points, and formatting changes are always taken into account
+  when wrapping.
+  
+
+2008-03-11
+
+  Fix random number generation; the first instance of rnd in a program
+  will no longer produce predictable results.
+
+  Fix built-in load menu line truncation.
+
+  Fix bug causing text to be missing when coming out of skip mode.
+
+
+2008-03-09
+
+  Get Vista working properly (?).
+
+  Add Mion's workaround to fix sample rate mismatches in MPEG
+  playback.
+
+  Merge across the upstream ONScripter enhancements (mostly
+  sp2-related) that Mion has integrated into ONScripter-En.
+
+  
+2008-02-25
+
+  Improve diagnostics slightly.
+
+  Extend vsp, csp, (a)msp, and cell to provide some convenient
+  shorthands, tablegoto to provide a 1-based alternative, and add
+  movz, which is like movl but treats missing args as implicit zeroes.
+
+  Merge across the RC version synchronisation code from ONScripter-En.
+
+  
+2008-01-27
+
+  Revert setwindow and locate commands to the NScripter behaviour
+  (sizes defined in characters not pixels) in all cases, to simplify
+  porting.  A new h_locate command is provided as a pixel-oriented
+  replacement for locate, while a much improved pixel-oriented
+  setwindow replacement is already available in the form of
+  h_usewindow.
+
+  Filenames are now checked for non-ASCII text; finding any is
+  considered an error.  Life's too short to implement a fully general
+  cross-platform encoding-independent file access mechanism, and
+  frankly ASCII is good enough -- we're talking arbitrary identifier
+  tokens here, not _literature_.
+
+  Games were randomly segfaulting on my computer, and the problem
+  seemed to be related to string handling, so I've taken the
+  opportunity to get rid of the horrid pstring interface and replace
+  it with something a little saner, based on bstrlib.  Now it doesn't
+  segfault any more.
+
+  Fixed some other architectural oddities, notably the far-too-early
+  substitution of ligatures; this now doesn't take place until we're
+  actually trying to access glyphs, and consequentially we can stop
+  worrying about ligature substitution mangling filenames, and we can
+  ignore ligature definitions where there's no suitable glyph in the
+  active font.
+
+  
+2007-10-08
+
+  Support for soft subtitles in MPEG playback (but not, at present, in
+  AVI playback).
+
+  Add command logsp2utf -- equivalent to logsp2, but for UTF-8 text.
+
+  Various bug fixes: interaction between default styles and saved
+  games, ludicrously inefficient ligature searching, handling of
+  overlapping sprite-buttons.
+
+  Remove support for obsolete ONScripter-format saved games.
+
+  
+2007-09-25
+
+  Implement h_defwindow, h_usewindow, h_usewindow3: create and use
+  predefined sets of window settings.
+
+  Implement h_speedpercent: adjust all font speed settings
+  proportionately with a single convenient command.
+
+  
+2007-07-15
+
+  Fix glyph positioning and a number of OS X build bugs.
+
+  
+2007-06-16
+
+  Merge recent portability enhancements from ONScripter-En: configure
+  now works properly on a wider range of Unixes, and generates an
+  `install' target as documented.
+
+  
+2007-05-14
+
+  Improve path handling: all paths are now specified explicitly. 
+
+  Full file handling is partly rewritten in a higher-level manner as a
+  prelude to making things encoding-independent, but direct access to
+  files with non-ASCII filenames is still very much dependent on a
+  UTF-8 filesystem.
+
+  
+2007-05-13
+
+  The game identifier can now be derived from caption or versionstr
+  commands if the ;gameid directive is absent.
+
+  
+2007-04-28
+
+  Ponscripter games now use slightly different script filenames.
+  Limited support for NScripter scripts added; output is by no means
+  identical with ONScripter, and many things will not work, but some
+  NScripter games are now playable with proportional text (even
+  proportional Japanese text!) without any porting.
+
+  Reimplement the clickstr function.
+
+  Fix bug in selectcolor implementation that was causing select
+  colours to be lost whenever the interpreter was reset.
+
+
+2007-04-25
+
+  Merge in an adapted version of the `drawfix' patch to speed up
+  screen updates in windowed mode, plus a number of other patches:
+
+  Reduce flicker when sprites are changed (Roine Gustafsson)
+
+  Fix gcc detection on OS X (Roine)
+
+  Support multiple games without game IDs at the same time (Roine)
+
+  Fix incorrect clipping of text shadow (Roine)
+
+
+2007-04 (passim)
+
+  Major cleanup of source code, including conversion of many aspects
+  to use C++ idioms and STL containers.
+
+
+2007-04-15
+
+  Merge in useful fixes from onscripter-20070206.
+
+
+2007-01
+
+  Redesign build system to support automatic platform/dependency
+  detection and to allow bundling of dependencies.  This makes it
+  plausible to distribute the Linux version as source code, since a
+  straight configure-make cycle should finally "just work".
+
+  Reimplement menu handling initially stripped out during
+  proportionalisation.  Right-click menus now function as in
+  ONScripter.  Built-in save/load menus take advantage of proportional
+  text to display in automatically-formatted columns.
+
+  
+2006-11-30
+
+  Increase flexibility of file embedding.  Font files can now be
+  embedded in the executable: embedded fonts will be used only if the
+  file is not found in the data directory or in the game archive.
+  Icon embedding is now optional; the embedded icon, if present, will
+  be used only if "icon.png" is not found in the working directory.
+  The new system could easily be expanded to allow other files to be
+  embedded, including game data.
+  
+
+2006-11-22
+
+  Implement default data/save separation for Windows and Linux
+  too. This should enhance Vista compatibility considerably, and make
+  it possible to package Linux versions in a way that respects the
+  FHS.
+
+  
+2006-11-21
+
+  Implement ligature customisation.
+  
+  Integers can now be expressed in hexadecimal with an 0x prefix, as
+  in C.
+
+  
+2006-09-24
+
+  Replace SDL_ttf with a simpler, saner C++ interface (the
+  implementation still being largely drawn from SDL_ttf, of course).
+
+  Convert horizontal font positioning to use floating-point rather
+  than integer offsets.  Begin attempts at subpixel positioning (still
+  buggy).
+  
+  In the process, glyph caching has been removed.  ONScripter uses
+  _two_ glyph caches (!) -- one in SDL_ttf, which apparently only
+  works on ASCII characters anyway, and one in
+  ONScripterLabel. However, the speed of text rendering does not seem
+  to be affected at all by removing caching, suggesting that it's a
+  premature optimisation.  The code is simplified considerably by its
+  removal.
+
+  
+2006-09-18
+
+  Multi-font-style support.
+
+  
+2006-09-14
+
+  Automatic ligature support.
+
+  
+2006-09-08
+
+  Default icon embedded in interpreter.  (This is game-specific; users
+  are expected to use custom builds with these replaced.)
+
+  
+2006-09-06
+
+  Fork.
+
+  UTF-8 and proportional text support.
+  
+  Ruby, clickstr, and tategaki support removed.
+
+  
+2006-09-05 (as ONScripter)
+
+  Make archive path and save path separately configurable.  Game data
+  no longer has to be stored in a writable directory.
+  
+  OS X: make default archive path be the Resources folder of the
+  application bundle, and default save path be a new subfolder of the
+  user's Library/Preferences.  The name of the subfolder is derived
+  from a new "game identifier" that should be specified at the top of
+  0.txt with a ";gameid Whatever" line immediately after the modeline.

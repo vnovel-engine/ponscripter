@@ -1,0 +1,40 @@
+This file is not kept up to date.  Some/all of these bugs may not
+actually exist any more.  Consider this "notes", really.
+
+MAJOR BUGS
+
+* Problems using fullscreen mode under Compiz on Nezumi.  The symptom
+  is that the game flickers into fullscreen mode and then pops
+  straight back into a window.  Something to do with the Workarounds
+  plugin, but I've tried disabling workarounds individually and failed
+  to isolate the cause.  :(
+
+  
+MINOR BUGS
+
+* Unmarked text is still permitted.  (It now serves no purpose, so far
+  as I know.)
+
+* Click-to-display-a-full-page doesn't work in OS X 10.4+ unless
+  coalesced updates are disabled.
+
+* FontInfo doesn't store accurate information on extremes, so
+  getFullArea(), line_space() etc don't actually return the area
+  filled by existing text.
+  (TODO: need to check whether this still applies)
+
+* Built-in save/load menus are broken when encoding is Shift_JIS
+  (TODO: need to check whether this still applies)
+
+
+HEISENBUGS
+
+* In Narci2, enabling auto mode and then fast-forwarding may have
+  caused me to end up with no text showing and nothing happening till
+  I clicked.  This was at the top of the first lift, IIRC.
+  (TODO: try to duplicate this.)
+
+
+FEATURES
+
+* SHY (U+00AD) support would be nice.  Also non-breaking hyphens.
