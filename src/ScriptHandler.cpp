@@ -27,6 +27,10 @@
 #include "Fontinfo.h"
 #include <ctype.h>
 
+#ifdef __LIBRETRO__
+extern "C" void pons_script_error_longjmp(void);
+#endif
+
 #ifdef MACOSX
 #include <Carbon/Carbon.h>
 #endif
@@ -1097,7 +1101,9 @@ void ScriptHandler::errorAndExit(pstring s)
     fprintf(stderr, "Script error (line %d): %s\n(String buffer: [%s])\n",
             getLineByAddress(getCurrent(), true),
             (const char*) s, (const char*) string_buffer);
-    exit(-1);
+#ifdef __LIBRETRO__
+    pons_script_error_longjmp();
+#endif
 }
 
 void ScriptHandler::errorWarning(pstring s)
@@ -1579,6 +1585,9 @@ void ScriptHandler::LogInfo::write(ScriptHandler& h)
     }
     else {
         fprintf(stderr, "can't write %s\n", (const char*) filename);
+        #ifdef __LIBRETRO__
+            pons_script_error_longjmp();
+        #endif
         exit(-1);
     }
 }

@@ -23,6 +23,9 @@
  *  02111-1307 USA
  */
 
+#ifdef __LIBRETRO__
+extern "C" void pons_script_error_longjmp(void);
+#endif
 #include "PonscripterLabel.h"
 #include "version.h"
 
@@ -48,6 +51,7 @@ namespace Carbon {
 #include <sys/wait.h>
 #include <unistd.h>
 #include <errno.h>
+
 #endif
 
 #define CONTINUOUS_PLAY
@@ -613,6 +617,9 @@ int tryToLaunch(const char* command, const char* target)
     else {
 	// Child
 	execlp(command, command, target, (char*) NULL);
+	#ifdef __LIBRETRO__
+	    pons_script_error_longjmp();
+	#endif
 	_exit(255);
     }
 }
@@ -2490,6 +2497,9 @@ int PonscripterLabel::erasetextwindowCommand(const pstring& cmd)
 int PonscripterLabel::endCommand(const pstring& cmd)
 {
     quit();
+    #ifdef __LIBRETRO__
+        pons_script_error_longjmp();
+    #endif
     exit(0);
     return RET_CONTINUE; // dummy
 }

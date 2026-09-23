@@ -27,6 +27,10 @@
 #include "MadWrapper.h"
 #include <mad.h>
 
+#ifdef __LIBRETRO__
+extern "C" void pons_script_error_longjmp(void);
+#endif
+
 #define DEFAULT_AUDIOBUF 4096
 #define INPUT_BUFFER_SIZE (5 * 8192)
 
@@ -250,6 +254,9 @@ void mp3callback(void* userdata, Uint8* stream, int len)
 {
     if (MAD_WRAPPER_playAudio(userdata, stream, len) == 0) {
         printf("end of file\n");
+        #ifdef __LIBRETRO__
+            pons_script_error_longjmp();
+        #endif
         exit(0);
     }
 }
@@ -260,6 +267,9 @@ int main(void)
     if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_AUDIO) < 0) {
         fprintf(stderr,
             "Couldn't initialize SDL: %s\n", SDL_GetError());
+        #ifdef __LIBRETRO__
+            pons_script_error_longjmp();
+        #endif
         exit(1);
     }
 
@@ -273,6 +283,9 @@ int main(void)
     if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, DEFAULT_AUDIOBUF) < 0) {
         fprintf(stderr, "Couldn't open audio device!\n"
                         "  reason: [%s].\n", SDL_GetError());
+        #ifdef __LIBRETRO__
+            pons_script_error_longjmp();
+        #endif
         exit(-1);
     }
     else {

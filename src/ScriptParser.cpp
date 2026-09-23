@@ -25,6 +25,10 @@
 
 #include "ScriptParser.h"
 
+#ifdef __LIBRETRO__
+extern "C" void pons_script_error_longjmp(void);
+#endif
+
 #ifdef MACOSX
 namespace Carbon {
 #include <sys/stat.h>
@@ -517,6 +521,9 @@ void ScriptParser::saveGlobalData()
 
     if (saveFileIOBuf("global.sav")) {
         fprintf(stderr, "can't open global.sav for writing\n");
+        #ifdef __LIBRETRO__
+            pons_script_error_longjmp();
+        #endif
         exit(-1);
     }
 }
@@ -727,6 +734,12 @@ void ScriptParser::errorAndCont(const char* why, const char* reason)
 void ScriptParser::errorAndExit(const char* why, const char* reason)
 {
     errorAndCont(why, reason);
+#ifdef __LIBRETRO__
+    pons_script_error_longjmp();
+#endif
+    #ifdef __LIBRETRO__
+        pons_script_error_longjmp();
+    #endif
     exit(-1);
 }
 
@@ -798,6 +811,9 @@ ScriptParser::Effect& ScriptParser::parseEffect(bool init_flag)
         if (*it && ((*it)->no == tmp_effect.effect)) return **it;
 
     fprintf(stderr, "Effect No. %d is not found.\n", tmp_effect.effect);
+    #ifdef __LIBRETRO__
+        pons_script_error_longjmp();
+    #endif
     exit(-1);
 }
 

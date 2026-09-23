@@ -25,7 +25,7 @@
 
 #include "PonscripterLabel.h"
 
-#if defined (LINUX) || defined (MACOSX)
+#if defined (LINUX) || defined (MACOSX) || defined(__LIBRETRO__)
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -52,7 +52,7 @@ void PonscripterLabel::searchSaveFile(SaveFileInfo &save_file_info, int no)
 
     pstring filename;
     filename.format("%ssave%d.dat", (const char*) script_h.save_path, no);
-#if defined (LINUX) || defined (MACOSX)
+#if defined (LINUX) || defined (MACOSX) || defined(__LIBRETRO__)
     struct stat buf;
     struct tm*  tm;
     if (stat(filename, &buf) != 0) {

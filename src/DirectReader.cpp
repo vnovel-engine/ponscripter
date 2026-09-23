@@ -367,7 +367,7 @@ pstring DirectReader::convertFromSJISToUTF8(const pstring& src)
         dst += utf8.Encode(cp932.DecodeChar(c, b));
         c += b;
     }
-#elif defined(WIN32)
+#elif defined(WIN32) && !defined(__LIBRETRO__)
     const char *src_ptr = src;
     int wc_size = MultiByteToWideChar(932, 0, src_ptr, -1, NULL, 0);
     wchar_t *u16_tmp = new wchar_t[wc_size];

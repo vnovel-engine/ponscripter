@@ -33,6 +33,10 @@
 #include "resources.h"
 #include <math.h>
 
+#ifdef __LIBRETRO__
+extern "C" void pons_script_error_longjmp(void);
+#endif
+
 int screen_ratio1 = 1, screen_ratio2 = 1;
 
 int Fontinfo::default_encoding = 0;
@@ -100,6 +104,9 @@ Font* FontsStruct::font(int style)
 {
     if (!isinit) {
         fprintf(stderr, "ERROR: fonts struct not initialised\n");
+        #ifdef __LIBRETRO__
+            pons_script_error_longjmp();
+        #endif
         exit(1);
     }
     
@@ -182,6 +189,9 @@ Font* FontsStruct::font(int style)
 
     fprintf(stderr, "Error: failed to open font %s\n",
             (const char*) mapping[style]);
+    #ifdef __LIBRETRO__
+        pons_script_error_longjmp();
+    #endif
     exit(1);
 }
 

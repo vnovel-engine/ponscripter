@@ -23,6 +23,9 @@
  *  02111-1307 USA
  */
 
+#ifdef __LIBRETRO__
+extern "C" void pons_script_error_longjmp(void);
+#endif
 #include "PonscripterLabel.h"
 #include "resources.h"
 #include <ctype.h>
@@ -46,6 +49,7 @@ typedef HRESULT (WINAPI * GETFOLDERPATH)(HWND, int, HANDLE, DWORD, LPTSTR);
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <pwd.h>
+
 #endif
 
 extern "C" void waveCallback(int channel);
@@ -320,12 +324,18 @@ void PonscripterLabel::initSDL()
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) < 0) {
         fprintf(stderr, "Couldn't initialize SDL: %s\n", SDL_GetError());
+        #ifdef __LIBRETRO__
+            pons_script_error_longjmp();
+        #endif
         exit(-1);
     }
     atexit(SDL_Quit_Wrapper); // work-around for OS/2
 
     if (cdaudio_flag && SDL_InitSubSystem(SDL_INIT_CDROM) < 0) {
         fprintf(stderr, "Couldn't initialize CD-ROM: %s\n", SDL_GetError());
+        #ifdef __LIBRETRO__
+            pons_script_error_longjmp();
+        #endif
         exit(-1);
     }
 
@@ -374,13 +384,13 @@ void PonscripterLabel::initSDL()
 #endif //!MACOSX
     // If an icon was found (and desired), use it.
     if (icon && !use_app_icons) {
-#if defined(MACOSX) || defined(WIN32)
+#if defined(MACOSX) || (defined(WIN32) && !defined(__LIBRETRO__))
 #if defined(MACOSX)
         //resize the (usually 32x32) icon to 128x128
         SDL_Surface *tmp2 = SDL_CreateRGBSurface(SDL_SWSURFACE, 128, 128,
                                                  32, 0x00ff0000, 0x0000ff00,
                                                  0x000000ff, 0xff000000);
-#elif defined(WIN32)
+#elif defined(WIN32) && !defined(__LIBRETRO__)
         //resize the icon to 32x32
         SDL_Surface *tmp2 = SDL_CreateRGBSurface(SDL_SWSURFACE, 32, 32,
                                                  32, 0x00ff0000, 0x0000ff00,
@@ -423,6 +433,9 @@ void PonscripterLabel::initSDL()
     modes = SDL_ListModes(NULL, 0);
     if (modes == (SDL_Rect **)0){
         fprintf(stderr, "No Video mode available.\n");
+        #ifdef __LIBRETRO__
+            pons_script_error_longjmp();
+        #endif
         exit(-1);
     }
     else if (modes == (SDL_Rect **)-1){
@@ -460,6 +473,9 @@ void PonscripterLabel::initSDL()
     if (screen_surface == 0) {
         fprintf(stderr, "Couldn't set %dx%dx%d video mode: %s\n",
                 screen_width, screen_height, screen_bpp, SDL_GetError());
+        #ifdef __LIBRETRO__
+            pons_script_error_longjmp();
+        #endif
         exit(-1);
     }
 
@@ -760,6 +776,9 @@ pstring Platform_GetSavePath(pstring gameid) // MacOS X version
     // If that fails, die.
     StandardAlert(kAlertStopAlert, "\pmkdir failure",
                   "\pCould not create a directory for saved games.", NULL, NULL);
+    #ifdef __LIBRETRO__
+        pons_script_error_longjmp();
+    #endif
     exit(1);
 }
 #elif defined LINUX
@@ -767,6 +786,9 @@ pstring Platform_GetSavePath(pstring gameid) // POSIX version
 {
     if (!gameid) {
         fprintf(stderr, "No gameid\n");
+        #ifdef __LIBRETRO__
+            pons_script_error_longjmp();
+        #endif
         exit(1);
     }
     
