@@ -1,3 +1,4 @@
+#include <unistd.h>
 /* -*- C++ -*-
  *
  *  AnimationInfo.cpp - General image storage class of Ponscripter

@@ -100,6 +100,14 @@ public:
     ~PonscripterLabel();
    
     // ----------------------------------------
+    // Libretro interface getters
+    int  getWidth() { return screen_width; }
+    int  getHeight() { return screen_height; }
+    bool isAutoMode() { return automode_flag; }
+    bool isSkipMode() { return skip_flag; }
+    void setDebugLevel(int level) { debug_level = level; }
+   
+    // ----------------------------------------
     // start-up options
     void enableCDAudio();
     void setDebugMode();
@@ -795,7 +803,9 @@ private:
     void flush(int refresh_mode, SDL_Rect* rect = 0,
                bool clear_dirty_flag = true, bool direct_flag = false);
     void flushDirect(SDL_Rect &rect, int refresh_mode, bool updaterect = true);
+public:
     void executeLabel();
+private:
     int parseLine();
 
     void mouseOverCheck(int x, int y);
