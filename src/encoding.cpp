@@ -25,7 +25,7 @@
 #include "Fontinfo.h"
 
 #ifdef __LIBRETRO__
-extern "C" void pons_script_error_longjmp(void);
+extern "C" void libretro_script_error_longjmp(void);
 #endif
 
 Encoding *file_encoding = 0; // the encoding used by the script file
@@ -412,7 +412,7 @@ void Encoding::SetStyle(int& style, const char flag)
     case 0:
         fprintf(stderr, "Error: non-matching ~tags~\n");
         #ifdef __LIBRETRO__
-            pons_script_error_longjmp();
+            libretro_script_error_longjmp();
         #endif
         exit(1);
     default:
@@ -480,7 +480,7 @@ pstring Encoding::TranslateTag(const char* flag, int& in_len)
     case 0:
         fprintf(stderr, "Error: non-matching ~tags~\n");
         #ifdef __LIBRETRO__
-            pons_script_error_longjmp();
+            libretro_script_error_longjmp();
         #endif
         exit(1);
     default:

@@ -28,7 +28,7 @@
 #include <ctype.h>
 
 #ifdef __LIBRETRO__
-extern "C" void pons_script_error_longjmp(void);
+extern "C" void libretro_script_error_longjmp(void);
 #endif
 
 #ifdef MACOSX
@@ -1102,7 +1102,7 @@ void ScriptHandler::errorAndExit(pstring s)
             getLineByAddress(getCurrent(), true),
             (const char*) s, (const char*) string_buffer);
 #ifdef __LIBRETRO__
-    pons_script_error_longjmp();
+    libretro_script_error_longjmp();
 #endif
 }
 
@@ -1586,7 +1586,7 @@ void ScriptHandler::LogInfo::write(ScriptHandler& h)
     else {
         fprintf(stderr, "can't write %s\n", (const char*) filename);
         #ifdef __LIBRETRO__
-            pons_script_error_longjmp();
+            libretro_script_error_longjmp();
         #endif
         exit(-1);
     }

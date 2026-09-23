@@ -30,7 +30,7 @@
 #include "font.h"
 
 #ifdef __LIBRETRO__
-extern "C" void pons_script_error_longjmp(void);
+extern "C" void libretro_script_error_longjmp(void);
 #endif
 
 
@@ -122,7 +122,7 @@ FontInternals::FontInternals(const Uint8* data, size_t len, const Uint8* mdat,
     if (err) {
 	fprintf(stderr, "ERROR: Failed to open face.\n");
 	#ifdef __LIBRETRO__
-	    pons_script_error_longjmp();
+	    libretro_script_error_longjmp();
 	#endif
 	exit(1);
     }
@@ -139,7 +139,7 @@ Font::Font(const char* filename, const char* metrics)
     if (!fp) {
 	fprintf(stderr, "ERROR: This should never happen.\n");
 	#ifdef __LIBRETRO__
-	    pons_script_error_longjmp();
+	    libretro_script_error_longjmp();
 	#endif
 	exit(1);
     }
@@ -155,7 +155,7 @@ Font::Font(const char* filename, const char* metrics)
         if (!fp) {
 	    fprintf(stderr, "ERROR: This should never happen.\n");
 	    #ifdef __LIBRETRO__
-	        pons_script_error_longjmp();
+	        libretro_script_error_longjmp();
 	    #endif
 	    exit(1);
 	}

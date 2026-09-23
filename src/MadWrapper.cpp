@@ -28,7 +28,7 @@
 #include <mad.h>
 
 #ifdef __LIBRETRO__
-extern "C" void pons_script_error_longjmp(void);
+extern "C" void libretro_script_error_longjmp(void);
 #endif
 
 #define DEFAULT_AUDIOBUF 4096
@@ -255,7 +255,7 @@ void mp3callback(void* userdata, Uint8* stream, int len)
     if (MAD_WRAPPER_playAudio(userdata, stream, len) == 0) {
         printf("end of file\n");
         #ifdef __LIBRETRO__
-            pons_script_error_longjmp();
+            libretro_script_error_longjmp();
         #endif
         exit(0);
     }
@@ -268,7 +268,7 @@ int main(void)
         fprintf(stderr,
             "Couldn't initialize SDL: %s\n", SDL_GetError());
         #ifdef __LIBRETRO__
-            pons_script_error_longjmp();
+            libretro_script_error_longjmp();
         #endif
         exit(1);
     }
@@ -284,7 +284,7 @@ int main(void)
         fprintf(stderr, "Couldn't open audio device!\n"
                         "  reason: [%s].\n", SDL_GetError());
         #ifdef __LIBRETRO__
-            pons_script_error_longjmp();
+            libretro_script_error_longjmp();
         #endif
         exit(-1);
     }

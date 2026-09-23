@@ -24,7 +24,7 @@
  */
 
 #ifdef __LIBRETRO__
-extern "C" void pons_script_error_longjmp(void);
+extern "C" void libretro_script_error_longjmp(void);
 #endif
 #include "PonscripterLabel.h"
 #include "resources.h"
@@ -329,7 +329,7 @@ void PonscripterLabel::initSDL()
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) < 0) {
         fprintf(stderr, "Couldn't initialize SDL: %s\n", SDL_GetError());
         #ifdef __LIBRETRO__
-            pons_script_error_longjmp();
+            libretro_script_error_longjmp();
         #endif
         exit(-1);
     }
@@ -338,7 +338,7 @@ void PonscripterLabel::initSDL()
     if (cdaudio_flag && SDL_InitSubSystem(SDL_INIT_CDROM) < 0) {
         fprintf(stderr, "Couldn't initialize CD-ROM: %s\n", SDL_GetError());
         #ifdef __LIBRETRO__
-            pons_script_error_longjmp();
+            libretro_script_error_longjmp();
         #endif
         exit(-1);
     }
@@ -438,7 +438,7 @@ void PonscripterLabel::initSDL()
     if (modes == (SDL_Rect **)0){
         fprintf(stderr, "No Video mode available.\n");
         #ifdef __LIBRETRO__
-            pons_script_error_longjmp();
+            libretro_script_error_longjmp();
         #endif
         exit(-1);
     }
@@ -478,7 +478,7 @@ void PonscripterLabel::initSDL()
         fprintf(stderr, "Couldn't set %dx%dx%d video mode: %s\n",
                 screen_width, screen_height, screen_bpp, SDL_GetError());
         #ifdef __LIBRETRO__
-            pons_script_error_longjmp();
+            libretro_script_error_longjmp();
         #endif
         exit(-1);
     }
@@ -781,7 +781,7 @@ pstring Platform_GetSavePath(pstring gameid) // MacOS X version
     StandardAlert(kAlertStopAlert, "\pmkdir failure",
                   "\pCould not create a directory for saved games.", NULL, NULL);
     #ifdef __LIBRETRO__
-        pons_script_error_longjmp();
+        libretro_script_error_longjmp();
     #endif
     exit(1);
 }
@@ -791,7 +791,7 @@ pstring Platform_GetSavePath(pstring gameid) // POSIX version
     if (!gameid) {
         fprintf(stderr, "No gameid\n");
         #ifdef __LIBRETRO__
-            pons_script_error_longjmp();
+            libretro_script_error_longjmp();
         #endif
         exit(1);
     }

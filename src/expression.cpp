@@ -1,7 +1,7 @@
 #include "ScriptHandler.h"
 
 #ifdef __LIBRETRO__
-extern "C" void pons_script_error_longjmp(void);
+extern "C" void libretro_script_error_longjmp(void);
 #endif
 
 pstring typestr(Expression::type_t t, bool v = false)
@@ -22,7 +22,7 @@ void Expression::die(const char* why) const
     int line = h.getLineByAddress(h.getCurrent(), true);
     fprintf(stderr, "Parse error at line %d: %s\n", line, why);
     #ifdef __LIBRETRO__
-        pons_script_error_longjmp();
+        libretro_script_error_longjmp();
     #endif
     exit(-1);
 }

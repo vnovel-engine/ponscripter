@@ -24,7 +24,7 @@
  */
 
 #ifdef __LIBRETRO__
-extern "C" void pons_script_error_longjmp(void);
+extern "C" void libretro_script_error_longjmp(void);
 #endif
 #include "PonscripterLabel.h"
 #include "version.h"
@@ -618,7 +618,7 @@ int tryToLaunch(const char* command, const char* target)
 	// Child
 	execlp(command, command, target, (char*) NULL);
 	#ifdef __LIBRETRO__
-	    pons_script_error_longjmp();
+	    libretro_script_error_longjmp();
 	#endif
 	_exit(255);
     }
@@ -2498,7 +2498,7 @@ int PonscripterLabel::endCommand(const pstring& cmd)
 {
     quit();
     #ifdef __LIBRETRO__
-        pons_script_error_longjmp();
+        libretro_script_error_longjmp();
     #endif
     exit(0);
     return RET_CONTINUE; // dummy
