@@ -2062,7 +2062,7 @@ int PonscripterLabel::gettagCommand(const pstring& cmd)
     const char* buf = nest_infos.back().next_script;
     while (*buf == ' ' || *buf == '\t') buf++;
     int bytes;
-    if (zenkakko_flag && file_encoding->DecodeChar(buf, bytes) == 0x3010 /* \xE3\x80\x90 left bracket */)
+    if (zenkakko_flag && file_encoding->DecodeChar(buf, bytes) == 0x3010 /* 【 left bracket */)
         buf += bytes;
     else if (*buf == '[')
         buf++;
@@ -2083,9 +2083,9 @@ int PonscripterLabel::gettagCommand(const pstring& cmd)
 	    int bytes = 1;
 	    while (*buf != '/' &&
 		   ((zenkakko_flag &&
-		     (file_encoding->DecodeChar(buf, bytes) != 0x3011 /* \xE3\x80\x91 right bracket */)) ||
+		     (file_encoding->DecodeChar(buf, bytes) != 0x3011 /* 】 right bracket */)) ||
 		    (!zenkakko_flag &&
-             (file_encoding->DecodeChar(buf, bytes) != ']' /* \xE3\x80\x91 right bracket */))))
+             (file_encoding->DecodeChar(buf, bytes) != ']' /* 】 right bracket */))))
 		buf += bytes;
 	    e.mutate(pstring(buf_start, buf - buf_start));
 	}
@@ -2096,7 +2096,7 @@ int PonscripterLabel::gettagCommand(const pstring& cmd)
     }
     while (more_args);
 
-    if (zenkakko_flag && file_encoding->DecodeChar(buf, bytes) == 0x3010 /* \xE3\x80\x90 left bracket */)
+    if (zenkakko_flag && file_encoding->DecodeChar(buf, bytes) == 0x3010 /* 【 left bracket */)
 	buf += bytes;
     else if (*buf == ']') buf++;
 
