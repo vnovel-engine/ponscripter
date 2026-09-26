@@ -1,0 +1,46 @@
+<?xml version='1.0'?> <!--*- nxml -*-->
+<!DOCTYPE book [ <?I $mode.entities ?> ]>
+
+<!--
+  We use our own ad-hoc template system because there's no other obvious
+  way of making things nice to edit (e.g. with entities recognised, etc).
+
+  We define some processing instructions:
+  
+    ?I file   includes the named file (which is processed recursively).
+
+    ?L text   simply inserts text contents literally.  This enables us
+              to pass XML to the editor that will be commented out in
+              the final version.
+
+    ?IFmode text   inserts text if mode is the current mode (e.g. IFman)
+              
+    ?link id: text   inserts TEXT in man mode; in html mode, inserts
+                     <link linkend="id">text</link>.
+
+    ?D        expands to the last-modified date of the current file
+                     
+  Sorry to any purists who are offended to see XML treated like this.
+  No doubt I should be using XSL, but life's too short.
+-->
+
+<book xmlns="http://docbook.org/ns/docbook"
+      xmlns:xl="http://www.w3.org/1999/xlink"
+      version="5.0" xml:lang="en">
+<reference>
+  <info>
+    <title>Ponscripter manual</title>
+    <productname>Ponscripter</productname>
+    <productnumber><?I version-number ?></productnumber>
+  </info>
+
+  <?I ponscripter.7.xml   ?>
+  <?I ponscr.6.xml        ?>
+  <?I ponscr-syntax.7.xml ?>
+  <?I ponscr-ext.7.xml    ?>
+
+  <?L <!-- ?><refentry><refnamediv><refname/><refpurpose/></refnamediv>
+  <refsect1><title/><para/></refsect1></refentry><?L --> ?>
+
+</reference>
+</book>

@@ -1,0 +1,336 @@
+This document is obsolete; it's being migrated to the manpages.
+
+/---------------------------------------------------------------------
+|  h_ligate <string>, <int>
+|  h_ligate <string>, <string>
+|  h_ligate <string>, remove
+|  h_ligate <predefined set>
+
+Additional shortcuts/ligatures can be defined (or existing shortcuts
+undefined) using the h_ligate command.  As text is rendered, it's
+checked for known character sequences, which are replaced with a
+single character if a suitable glyph is available in the current font.
+
+The first two forms of this command define shortcuts/ligatures: the
+first <string> is the text to replace, and the second argument is
+either the Unicode number of the character to use instead, or a string
+of which the first character is taken to be the desired replacement.
+For example, to define the standard fi/fl ligatures, you could use
+
+  h_ligate "fi", 0xfb01
+  h_ligate "fl", 0xfb02
+
+Where multiple replacements begin with the same substring, define the
+shortest first, or the longer options will never be used.
+
+If the second parameter is the bareword "remove" (without quotation
+marks), any defined ligature/shortcut for the first parameter will be
+undefined.
+
+Some built-in sets define the shortcuts I personally use.
+
+Note that these shortcuts are not processed in clickstr, and I doubt
+they're processed in clickstr tests either.  Write your scripts in
+full UTF-8 if you want to use the clickstr feature.  (But preferably
+just don't use it; it's nasty.)
+
+
+/---------------------------------------------------------------------
+|  h_textextent <ivar>,<string>,[size_x],[size_y],[pitch_x]
+
+Sets <ivar> to the width, in pixels, of <string> as rendered in the
+current sentence font.  If given, size_x, size_y, and pitch_x override
+the current window settings (useful for calculating the size of
+buttons etc.)
+
+
+/---------------------------------------------------------------------
+|  h_textheight <ivar>,<string>,[string...]
+
+Sets <ivar> to the height, in pixels, that would be taken up if the
+<strings> were printed as consecutive paragraphs on a single page in
+the current text window.  The text is not actually displayed.
+
+This can be used to align a block of text vertically:
+
+  ; Centre text vertically in window
+  h_textheight %var, ^Pretend this is long, maybe several lines.^
+  h_locate 0, ([height of window] / 2) - (%var / 2)
+  ^Pretend this is long, maybe several lines.\
+
+  
+/---------------------------------------------------------------------
+|  h_centreline <string>
+
+A basic hack to make it easier to centre text horizontally.
+
+Sets the current x position to the expected location required to
+centre the given <string> on screen (NOT in the window, which must be
+large enough and appropriately positioned!) in the current sentence
+font.  The text is not actually displayed.
+
+Sample usage:
+
+  h_centreline ^...that dazzling sun... that summer's day...^
+  ^...that dazzling sun... that summer's day...\
+
+
+/---------------------------------------------------------------------
+|  br
+|  br2 <amount>
+
+In NScripter, the "br" command inserts a blank line of the same height
+as a regular line of text.  In Ponscripter, it inserts precisely half
+that amount of space, so paragraphs will not be so crazily far apart
+by default.
+
+Additionally, a new command "br2" is introduced.  The given <amount>
+is the height of the blank space as a percentage of the height of a
+regular line of text. In other words, "br2 50" is equivalent to "br",
+while "br2 100" is equivalent to the "br" command in standard
+NScripter.
+
+
+/---------------------------------------------------------------------
+|  gettextspeed <ivar>
+
+There's probably already a way to retrieve the current text speed, but
+I couldn't find it, so I added one.  Now you can do
+
+  gettextspeed %var
+  textspeed 0
+  ^Fast text!\
+  textspeed %var
+
+without having to worry about what the text speed was before you set
+it to 0.
+
+
+/---------------------------------------------------------------------
+|  Command changes 1: size and position
+
+Earlier versions of Ponscripter modified locate and setwindow to
+operate in pixels rather than characters.  This has now been reverted,
+and instead alternative pixel-based commands are provided; locate and
+setwindow are retained for compatibility, but they are deprecated.
+
+/---------------------------------------------------------------------
+|  h_locate <x>, <y>
+
+A pixel-based replacement for locate.  It works just how you'd expect.
+In particular, movements performed by h_locate (but not locate) are
+remembered and will be repeated when scrolling back through viewed
+text.
+
+/---------------------------------------------------------------------
+|  h_defwindow <name>, (definition)
+|  h_usewindow <name>
+
+Instead of defining the full window every time it changes, you should
+define your windows only once, and then refer back to those central
+definitions as appropriate.
+
+h_defwindow takes a name followed by the same parameters as setwindow,
+EXCEPT THAT only one font size parameter is given.  h_usewindow then
+refers back to this name.
+
+Currently no validation is performed on the name, so attempting to use
+a window that has not been defined will probably cause a horrible
+crash.  So don't do that.
+
+In other words, instead of defining an ad-hoc window at the point of
+use with a command like
+
+  setwindow 150,358,35,17,17,17,0,3,1,1,5,#ffffff,0,0,799,599
+
+you should define the window once with
+
+  h_defwindow "main", 150,358,540,240,19,0,0,1,1,5,#ffffff,0,0,799,599
+
+in the *define section, and then instead of setwindow commands, simply
+
+  h_usewindow "main"
+
+suffices.
+
+
+/---------------------------------------------------------------------
+|  Command changes 2: sprite extension
+
+The lsp command has been extended slightly.
+
+In ONScripter, an English text sprite would be created using a
+definition string like
+
+  ":s/[xsize],[ysize],[pitch];#FORECOLOUR#BACKCOLOUR`text"
+
+There are three changes in Ponscripter.
+
+* Firstly, obviously the ` is replaced with ^ and text tags are
+  permitted after it.
+
+* Secondly, if ":S/" is used in place of ":s/", the x position of the
+  sprite is measured relative to its centre, rather than to the left
+  edge; this makes it easier to create centered dialog buttons and the
+  like.
+
+* Thirdly, the ysize, pitch, and colour parameters become optional.
+  If pitch is not given, it defaults to 0.  If ysize is not given, it
+  defaults to xsize.  The colours can be omitted by giving them as ##
+  instead, in which case they default to white and black respectively.
+
+
+/---------------------------------------------------------------------
+|  Soft subtitles
+
+An easy method to subtitle an MPEG video is provided by extending the
+plaympeg command to take an additional optional argument, which gives
+the name of a file containing subtitle definitions.  Within this file,
+whole-line comments are permitted with ;.
+
+There are two types of line.  One defines layouts:
+
+  define <number>,<pos>,[colour],[alpha]
+
+where "number" is a zero-based one-up reference, "colour" is an
+NScripter-style colour definition ("#RRGGBB"), "pos" is the vertical
+location of subtitles with this number, and "alpha" is its opacity (0
+= transparent, 255 = opaque).  Both colour and alpha are optional; if
+they default to white and opaque respectively.
+
+The other type of line defines subtitles themselves:
+
+  <float>,<float>,<integer>,<arbitrary text>
+
+where the first number gives the time to display the subtitle, the
+second the time to remove it, the third indicates which subtitle to
+change, and the remainder of the line is interpreted as a text sprite
+definition which is overlaid on the video during the given times.
+
+The order of these lines is irrelevant; only the times are meaningful.
+If two subtitles with the same number have overlapping time spans,
+then the second will replace the first at its given start time, but
+will disappear at the earlier of the two end times.  To display
+multiple subtitles at the same time, use different numbers.
+
+Note that none of this applies to AVI files -- only MPEG files can be
+soft-subbed at present.
+
+
+/---------------------------------------------------------------------
+|  Miscellaneous new commands
+
+watch_var %var
+
+  Prints a line to stderr giving details of every change made to %var.
+  Useful for confirming that a variable is unused, or for tracking
+  down unexpected changes.
+
+
+/---------------------------------------------------------------------
+|  Enhanced OS X support
+
+OS X support in Ponscripter is enhanced in the same way as in
+ONScripter-En, namely:
+
+1. Data files (script, fonts, archives) are stored in the
+   Contents/Resources directory within the application bundle.  This
+   means your game will appear as a single drag-to-install icon, not
+   as an untidy bunch of files.
+
+2. Saved games and configuration settings are stored in a subdirectory
+   of the user's ~/Library/Preferences, not in the directory holding
+   the program. This again makes it possible to treat the game as a
+   regular OS X application.  The name of the directory is based on
+   the ;gameid directive (see "Directives" above).
+
+
+/---------------------------------------------------------------------
+|  Enhanced Windows support (incl. Vista)
+
+As described in "Directives", on modern Windows systems saved games
+and configuration settings are stored in the All Users profile, which
+retains the shared nature of these that NScripter users expect while
+avoiding problems with limited user accounts being unable to write to
+Program Files.
+
+Additionally, diagnostic output (the "stdout.txt" and "stderr.txt"
+files) is placed in All Users\Application Data\Ponscripter.  (This
+folder is always created at launch, but is removed automatically if a
+game is run without emitting any diagnostic output.)
+
+The result of this is that games can be run on Vista without requiring
+privilege escalation and without writing to users' virtual stores.
+Since saved games are placed in a single shared location, it is also
+possible to reliably perform a clean uninstallation of a Ponscripter
+game, removing saved games. (Naturally this behaviour should be
+optional!)
+
+On ancient versions of Windows that do not support the required APIs
+(basically just Windows 95 without IE 5), this behaviour will
+theoretically degrade gracefully to the standard ONScripter behaviour.
+It's probably safe to assume that nobody will ever find out if this
+works.
+
+
+/---------------------------------------------------------------------
+|  Features removed
+
+  Ruby, tategaki
+
+Largely meaningless in Western text. Both can be simulated in small
+quantities if required by judicious use of h_textextent and font
+size/position tags.
+
+  Glyph caching
+
+ONScripter has two independent glyph caches.  Ponscripter has none.
+You may theoretically notice slightly poorer performance rendering
+long runs of text, but I haven't observed any difference, and the code
+is much simpler now they're gone.
+
+
+/---------------------------------------------------------------------
+|  Builds
+
+Fonts and icons can be embedded in the game executable.  This is
+primarily useful on Windows, since OS X's bundles already provide this
+functionality.  For icons, embed the file "icon.png".  (Note that this
+will not give the file a Windows icon resource, which must be provided
+separately.)
+
+Other platforms (primarily Linux) are harder to provide binary
+packages for.  It is recommended that you cater for such platforms by
+providing a package containing just the data files and a basic
+installation script which installs those data files and creates a
+launcher script; Ponscripter itself should be considered an external
+dependency which is to be satisfied by the user him/herself, either by
+compiling it from source or by installing a platform-specific binary
+package.
+
+For example, your tarball might contain simply
+  
+  mygame/
+  install.sh
+  README
+
+where "mygame" contained the game data, and "README" included
+instructions to run "sudo sh install.sh" or equivalent.  install.sh in
+turn could be something as simple as
+
+  #! /bin/sh
+  WHERE=${PREFIX:-/usr/local}
+  DAT=$WHERE/share/games/mygame
+  BIN=$WHERE/bin
+  mkdir -p $DAT
+  mkdir -p $BIN
+  cp -r mygame/* $DAT
+  echo "#! /bin/sh
+  ponscr -r $DAT" > $BIN/mygame
+  chmod 755 $BIN/mygame
+
+...though you might want to take some time to improve the interface
+and fix the numerous portability issues in the above, or even to
+provide binary packages for popular free operating systems.  (With
+dependencies on a binary Ponscripter package, of course, which you're
+also welcome to provide.)
