@@ -1363,9 +1363,9 @@ void PonscripterLabel::executeLabel()
             }
 
             pstring cmd = script_h.getStrBuf();
-            cmd.trunc(32);
+            cmd.trunc(128);
             for (int i = 0; i < cmd.length(); ++i)
-                if (cmd[i] == ' ' || cmd[i] == '\n') { cmd.trunc(i); break; }
+                if (cmd[i] == '\n') { cmd.trunc(i); break; }
             printf("*****  executeLabel %s:%d/%d:%d:%d [%s] *****\n",
                    (const char*) current_label_info.name,
                    current_line,
