@@ -29,6 +29,7 @@ void PonscripterLabel::enterSystemCall()
 {
     shelter_buttons.swap(buttons);
     buttons.clear();
+    shortcut_mouse_line = 0;
     shelter_select_links.swap(select_links);
     select_links.clear();
     shelter_event_mode = event_mode;
@@ -58,6 +59,7 @@ void PonscripterLabel::leaveSystemCall(bool restore_flag)
         restoreTextBuffer();
 	buttons.swap(shelter_buttons);
 	shelter_buttons.clear();
+	shortcut_mouse_line = 0;
 	select_links.swap(shelter_select_links);
 	shelter_select_links.clear();
 

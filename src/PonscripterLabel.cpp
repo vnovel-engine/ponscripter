@@ -1324,7 +1324,7 @@ void PonscripterLabel::mouseOverCheck(int x, int y)
                 new_btn.show_flag = 1;
             }
             dirty_rect.add(new_btn.image_rect);
-            shortcut_mouse_line = buttons.find(button);
+            shortcut_mouse_line = button;
         }
 
         flush(refreshMode());

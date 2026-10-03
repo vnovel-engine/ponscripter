@@ -674,28 +674,41 @@ void PonscripterLabel::variableEditMode(SDL_KeyboardEvent* event)
 
 void PonscripterLabel::shiftCursorOnButton(int diff)
 {
+    /* `shortcut_mouse_line` is a button *key*, not a map iterator, so it
+     * survives the swap/clear of `buttons` in enter/leaveSystemCall. Key 0
+     * is the menu-title pseudo-button and is skipped when stepping. */
+    if (buttons.empty()) return;
+
     if (buttons.size() < 2)
-	shortcut_mouse_line = buttons.begin();
+        shortcut_mouse_line = buttons.begin()->first;
     else if (diff > 0) {
-	while (diff--) {
-	    do {
-		if (shortcut_mouse_line == buttons.begin())
-		    shortcut_mouse_line = buttons.end();
-		--shortcut_mouse_line;
-	    } while (shortcut_mouse_line->first == 0);
-	}
+        while (diff--) {
+            do {
+                ButtonElt::iterator it = buttons.find(shortcut_mouse_line);
+                if (it == buttons.end() || it == buttons.begin())
+                    it = buttons.end();
+                --it;
+                shortcut_mouse_line = it->first;
+            } while (shortcut_mouse_line == 0);
+        }
     }
     else {
-	while (diff++) {
-	    do {
-		++shortcut_mouse_line;
-		if (shortcut_mouse_line == buttons.end())
-		    shortcut_mouse_line = buttons.begin();
-	    } while (shortcut_mouse_line->first == 0);
-	}
+        while (diff++) {
+            do {
+                ButtonElt::iterator it = buttons.find(shortcut_mouse_line);
+                if (it == buttons.end())
+                    it = buttons.begin();
+                else if (++it == buttons.end())
+                    it = buttons.begin();
+                shortcut_mouse_line = it->first;
+            } while (shortcut_mouse_line == 0);
+        }
     }
-    ButtonElt& e = shortcut_mouse_line->second;
-    
+
+    ButtonElt::iterator it = buttons.find(shortcut_mouse_line);
+    if (it == buttons.end()) return;
+    ButtonElt& e = it->second;
+
     int x = e.select_rect.x + e.select_rect.w / 2;
     int y = e.select_rect.y + e.select_rect.h / 2;
     if (x < 0) x = 0; else if (x >= screen_width) x = screen_width - 1;

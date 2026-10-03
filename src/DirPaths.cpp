@@ -110,6 +110,7 @@ pstring DirPaths::get_all_paths()
 {
     pstring all_paths("");
     unsigned int n;
+    if (paths.empty()) return all_paths;
     for (n=0; n<paths.size()-1; n++) {
         all_paths += paths.at(n) + PATH_DELIMITER;
     }

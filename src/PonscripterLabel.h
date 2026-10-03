@@ -714,7 +714,11 @@ private:
     };
     SelectElt::vector select_links, shelter_select_links;
     const char* select_label_next_script;
-    ButtonElt::iterator shortcut_mouse_line;
+    /* Button key (map key) of the button the keyboard cursor is on, or 0 for
+     * none. Stored as a key, not a std::map iterator: enter/leaveSystemCall
+     * swap/clear `buttons`, which invalidates any held iterator and made
+     * shiftCursorOnButton walk freed nodes (SIGSEGV). */
+    int shortcut_mouse_line;
 
     ButtonElt getSelectableSentence(const pstring& buffer, Fontinfo* info,
                                     bool flush_flag = true,

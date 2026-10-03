@@ -917,7 +917,7 @@ int PonscripterLabel::selectCommand(const pstring& cmd)
 	    script_h.readIntExpr();
 	}
 	
-        shortcut_mouse_line = buttons.end();
+        shortcut_mouse_line = 0;
 
         float old_x = sentence_font.GetXOffset();
         int   old_y = sentence_font.GetYOffset();
@@ -3011,7 +3011,7 @@ int PonscripterLabel::btnwaitCommand(const pstring& cmd)
         return RET_CONTINUE;
     }
     else {
-        shortcut_mouse_line = buttons.begin();
+        shortcut_mouse_line = buttons.empty() ? 0 : buttons.begin()->first;
         setSkipMode(false);
 
         if (exbtn_d_button.exbtn_ctl) {
