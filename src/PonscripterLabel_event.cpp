@@ -62,7 +62,14 @@ extern long decodeOggVorbis(PonscripterLabel::MusicStruct *music_struct, Uint8 *
 * **************************************** */
 extern "C" void mp3callback(void* userdata, Uint8* stream, int len)
 {
-    if (SMPEG_playAudio((SMPEG*) userdata, stream, len) == 0) {
+    /* SMPEG returns 0 for the first couple of buffers while the stream is
+     * priming — at that point SMPEG_status() is still SMPEG_PLAYING. The
+     * engine treats any 0 as "track finished" and restarts the BGM, which
+     * then never gets past priming: silent BGM plus a runaway restart loop
+     * (stopBGM/playSound thousands of times per second, 200% CPU). Only a
+     * 0 after playback has actually stopped is end-of-track. */
+    if (SMPEG_playAudio((SMPEG*) userdata, stream, len) == 0 &&
+        SMPEG_status((SMPEG*) userdata) != SMPEG_PLAYING) {
         SDL_Event event;
         event.type = ONS_SOUND_EVENT;
         SDL_PushEvent(&event);
