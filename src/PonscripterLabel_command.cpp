@@ -2945,7 +2945,7 @@ int PonscripterLabel::captionCommand(const pstring& cmd)
         }
     }
     SDL_WM_SetCaption(cap, cap);
-#ifdef WIN32
+#if defined(WIN32) && !defined(__LIBRETRO__)
     //convert from UTF-8 to Wide (Unicode) and thence to system ANSI
     // (since SDL 1.2 doesn't support Unicode app compilation)
     int len = MultiByteToWideChar(CP_UTF8, 0, (const char*)cap, -1, NULL, 0);

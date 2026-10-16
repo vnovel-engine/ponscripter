@@ -1,2 +1,6 @@
 *.pons.o
 *.o
+
+# Code review tool
+/REVIEW.md
+/.review-history/

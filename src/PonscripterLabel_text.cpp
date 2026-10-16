@@ -25,6 +25,13 @@
 
 #include "PonscripterLabel.h"
 
+/* Text-plane sink (see src/engine_bridge.h). Included only in the libretro
+ * build: a standalone engine has no shell to publish to, so publishTextPlane
+ * compiles to nothing there. */
+#ifdef __LIBRETRO__
+#include "engine_bridge.h"
+#endif
+
 Glyph
 PonscripterLabel::renderGlyph(Font* font, Uint16 text, int size,
                               float x_fractional_part)
@@ -120,7 +127,7 @@ PonscripterLabel::drawChar(const char* text, Fontinfo* info, bool flush_flag,
         int   y = info->GetY() * screen_ratio1 / screen_ratio2;
 
         SDL_Color color;
-        SDL_Rect  dst_rect;
+        SDL_Rect  dst_rect = { 0, 0, 0, 0 };
         if (info->is_shadow) {
             color.r = color.g = color.b = 0;
             drawGlyph(surface, info, color, unicode, x, y, true, cache_info,
@@ -132,6 +139,20 @@ PonscripterLabel::drawChar(const char* text, Fontinfo* info, bool flush_flag,
         color.b = info->color.b;	
         drawGlyph(surface, info, color, unicode, x, y, false, cache_info,
 		  clip, dst_rect);
+
+        /* Text-plane capture: this glyph (with its shadow) is what just changed
+         * on text_info's surface. `dst_rect` is the glyph's own draw rect from
+         * drawGlyph; a copy is widened by addShadeArea to cover the shadow too,
+         * the bound the frame's own dirty rect uses — exact for the glyph, with
+         * at most the shadow offset as slack. Suppressed while restoreTextBuffer
+         * replays a page. The guard skips drawGlyph's no-bitmap early return,
+         * which leaves dst_rect unwritten. */
+        if (cache_info == &text_info && !text_plane_suppress &&
+            dst_rect.w > 0 && dst_rect.h > 0) {
+            SDL_Rect plane_rect = dst_rect;
+            info->addShadeArea(plane_rect, shade_distance);
+            publishTextPlane(plane_rect, false);
+        }
 
 	info->addShadeArea(dst_rect, shade_distance);
         if (surface == accumulation_surface && !flush_flag
@@ -212,9 +233,64 @@ PonscripterLabel::drawString(const char* str, rgb_t color, Fontinfo* info,
 }
 
 
+void PonscripterLabel::publishTextPlane(SDL_Rect &changed, bool restart)
+{
+#ifdef __LIBRETRO__
+    /* Cheap early-out: nothing to do unless a shell asked for the plane. */
+    if (!vnovel_text_plane_wanted() || !text_info.image_surface) return;
+
+    SDL_Surface *surf = text_info.image_surface;
+    SDL_Rect r = changed;
+
+    /* A page restarted — either the caller says so or clearCurrentTextBuffer()
+     * marked it — means everything previously on the plane is gone, so the
+     * whole surface counts as changed and the consumer returns to the top. */
+    if (restart || text_plane_pending_restart) {
+        restart = true;
+        text_plane_pending_restart = false;
+        r.x = r.y = 0;
+        r.w = surf->w;
+        r.h = surf->h;
+    }
+    if (r.w <= 0 || r.h <= 0) return;
+
+    /* Clamp the reported change to the surface. */
+    if (r.x < 0) { r.w += r.x; r.x = 0; }
+    if (r.y < 0) { r.h += r.y; r.y = 0; }
+    if (r.x + r.w > surf->w) r.w = surf->w - r.x;
+    if (r.y + r.h > surf->h) r.h = surf->h - r.y;
+    if (r.w <= 0 || r.h <= 0) return;
+
+    VNovelTextPlane plane;
+    plane.pixels    = surf->pixels;
+    plane.width     = surf->w;
+    plane.height    = surf->h;
+    plane.pitch     = surf->pitch;
+    plane.changed_x = r.x;
+    plane.changed_y = r.y;
+    plane.changed_w = r.w;
+    plane.changed_h = r.h;
+    /* Text origin, in screen pixels: Fontinfo holds the window origin in script
+     * space (top_x/top_y) and drawChar scales it by screen_ratio1/screen_ratio2
+     * before drawing, so scale the same way here for a shell that does not
+     * scroll to place the text where the game drew it. */
+    plane.origin_x  = sentence_font.top_x * screen_ratio1 / screen_ratio2;
+    plane.origin_y  = sentence_font.top_y * screen_ratio1 / screen_ratio2;
+    plane.restart   = restart ? 1 : 0;
+    plane.serial    = ++text_plane_serial;
+    vnovel_publish_text_plane(&plane);
+#else
+    (void)changed;
+    (void)restart;
+#endif
+}
+
 void PonscripterLabel::restoreTextBuffer()
 {
     text_info.fill(0, 0, 0, 0);
+    /* Replaying a page redraws every glyph: suppress the per-glyph publishes
+     * and emit a single restart publish when the page is whole again. */
+    text_plane_suppress = true;
 
     Fontinfo f_info = sentence_font;
     f_info.clear();
@@ -233,6 +309,13 @@ void PonscripterLabel::restoreTextBuffer()
         else {
             i += drawChar(buffer + i, &f_info, false, false, NULL, &text_info);
         }
+    }
+
+    /* The page is redrawn: publish it once as a restart. */
+    text_plane_suppress = false;
+    {
+        SDL_Rect whole = { 0, 0, 0, 0 };
+        publishTextPlane(whole, true);
     }
 }
 

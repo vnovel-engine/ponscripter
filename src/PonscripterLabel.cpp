@@ -25,8 +25,23 @@
 
 #ifdef __LIBRETRO__
 extern "C" void libretro_script_error_longjmp(void);
+/* Published by the core through the bridge module (engine_bridge.h). The
+ * same knob the ONScripter path uses: a percent multiplier on how opaque the
+ * text-window backdrop is (100 = unchanged). Guarded so the engine still
+ * builds outside the libretro core, where it falls back to 100. */
+extern "C" {
+    extern int vnovel_textbox_opacity;
+}
+#else
+static const int vnovel_textbox_opacity = 100;
 #endif
 #include "PonscripterLabel.h"
+
+/* Text-rendering flags published by the core (see src/engine_bridge.h). The
+ * same switch gates ONScripter-EN's planner, so one option governs both. */
+extern "C" {
+    extern int vnovel_wrap_total_fit;
+}
 #include "resources.h"
 #include <ctype.h>
 
@@ -365,8 +380,10 @@ void PonscripterLabel::initSDL()
     //bundle, to have it always use the bundle icns)
 #ifndef MACOSX
     if (!icon || use_app_icons) {
-#ifdef WIN32
+#if defined(WIN32) && !defined(__LIBRETRO__)
         //use the (first) Windows icon resource
+        // (libretro excluded: SDL_SysWMinfo.window comes from SDL 2's header
+        // layout, and this core has no real window to set an icon on anyway.)
         HICON wicon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(ONSCRICON));
         if (wicon) {
             SDL_SysWMinfo info;
@@ -516,7 +533,8 @@ PonscripterLabel::PonscripterLabel()
     : registry_file(REGISTRY_FILE),
       dll_file(DLL_FILE),
       music_cmd(getenv("PLAYER_CMD")),
-      midi_cmd(getenv("MUSIC_CMD"))
+      midi_cmd(getenv("MUSIC_CMD")),
+      wrap_breaks(NULL), wrap_breaks_cap(0), num_wrap_breaks(0)
 {
 #if defined (USE_X86_GFX) && !defined(MACOSX)
     // determine what functions the cpu supports (Mion)
@@ -988,6 +1006,10 @@ int PonscripterLabel::init(const char* preferred_script)
     text_info.num_of_cells = 1;
     text_info.allocImage(screen_width, screen_height);
     text_info.fill(0, 0, 0, 0);
+
+    text_plane_serial = 0;
+    text_plane_pending_restart = false;
+    text_plane_suppress = false;
 
     // ----------------------------------------
     // Sound related variables
@@ -1516,6 +1538,26 @@ int PonscripterLabel::parseLine()
         file_encoding->DecodeWithLigatures(script_h.getStrBuf(string_buffer_offset),
                                       f, lf);
 
+    /* Total-fit: choose every break for the rest of this statement up front,
+     * with the shared planner, instead of deciding one run at a time as the
+     * routine below does. '@' is a pause, not an end, so the segment runs to the
+     * next page break / newline / control command. When the planner finds no
+     * fit the routine below still runs, so behaviour is unchanged there. */
+    if (vnovel_wrap_total_fit && is_break_char(first_ch) && !new_line_skip_flag) {
+        int seg_end = string_buffer_offset;
+        const char *b = script_h.getStrBuf(0);
+        while (b[seg_end]) {
+            char c = b[seg_end];
+            if (c == 0x0a || c == '\\') break;      // newline / page: carriage resets
+            if (c == '@') { seg_end++; continue; }   // pause: the line continues
+            seg_end += nextCharSizeAt(b + seg_end);
+        }
+        int nb = planWrapSegment(string_buffer_offset, seg_end);
+        /* The breaks are applied by the routine below as it walks; here we only
+         * record them. */
+        (void)nb;
+    }
+
     if (is_break_char(first_ch) && !new_line_skip_flag) {
         int l;
         const char* it = script_h.getStrBuf(string_buffer_offset) + lf;
@@ -1589,7 +1631,22 @@ int PonscripterLabel::parseLine()
             const float minlen = f.em_width() * 4;
             if (len < minlen) len = minlen;
         }
-        if (len > 0 && f.isNoRoomFor(len)) {
+        /* Whether the run that ends here starts a new line. Total-fit decided
+         * this offset up front (through the shared planner, so both engines
+         * agree); without the plan, fall back to the original one-run lookahead
+         * so behaviour is exactly what it was. */
+        bool break_here = (len > 0 && f.isNoRoomFor(len));
+        if (vnovel_wrap_total_fit && wrap_breaks) {
+            /* `it` is the token the run stopped at; a break was planned before
+             * it. Offsets are into the script buffer, and `it` points into it. */
+            int off = (int)(it - script_h.getStrBuf(0));
+            break_here = false;
+            for (int i = 0; i < num_wrap_breaks; i++) {
+                if (wrap_breaks[i] == off) { break_here = true; break; }
+                if (wrap_breaks[i] > off) break;    // ascending
+            }
+        }
+        if (break_here) {
             current_text_buffer->addBuffer(0x0a);
             sentence_font.newLine();
             f.newLine();
@@ -1647,6 +1704,9 @@ void PonscripterLabel::clearCurrentTextBuffer()
     internal_saveon_flag  = true;
 
     text_info.fill(0, 0, 0, 0);
+    /* The plane just went blank: the next publish reports a restart, so the
+     * shell returns to the top of its page. Cheap with no shell listening. */
+    text_plane_pending_restart = true;
     cached_text_buffer = current_text_buffer;
 }
 
@@ -1666,17 +1726,38 @@ void PonscripterLabel::shadowTextDisplay(SDL_Surface* surface, SDL_Rect &clip)
         ONSBuf* buf = (ONSBuf*) surface->pixels + rect.y * surface->w + rect.x;
 
         SDL_PixelFormat* fmt = surface->format;
-        rgb_t color(current_font->window_color.r >> fmt->Rloss,
-                     current_font->window_color.g >> fmt->Gloss,
-                     current_font->window_color.b >> fmt->Bloss);
+        /* The window darkens the pixels under it by colour/2^(8-loss). As in
+         * the ONScripter path, vnovel_textbox_opacity (percent) scales the
+         * window's distance from fully transparent: 100 = as authored, 0 = no
+         * darkening at all (the window is invisible), >100 = darker, clamped at
+         * full black. Computed in int because the factor can reach 256, which
+         * does not fit rgb_t's unsigned char. */
+        int color[3];
+        color[0] = current_font->window_color.r >> fmt->Rloss;
+        color[1] = current_font->window_color.g >> fmt->Gloss;
+        color[2] = current_font->window_color.b >> fmt->Bloss;
+        if (vnovel_textbox_opacity != 100) {
+            /* Identity factor for a channel is 2^(8-loss): the multiply in the
+             * loop is pixel*color >> (8-loss). */
+            const int cap[3] = { 1 << (8 - fmt->Rloss),
+                                 1 << (8 - fmt->Gloss),
+                                 1 << (8 - fmt->Bloss) };
+            for (int c = 0; c < 3; c++) {
+                int transparency = cap[c] - color[c];
+                int scaled = transparency * vnovel_textbox_opacity / 100;
+                if (scaled < 0)        scaled = 0;
+                if (scaled > cap[c])   scaled = cap[c];
+                color[c] = cap[c] - scaled;
+            }
+        }
 
         for (int i = rect.y; i < rect.y + rect.h; i++) {
             for (int j = rect.x; j < rect.x + rect.w; j++, buf++) {
-                *buf = (((*buf & fmt->Rmask) >> fmt->Rshift) * color.r >>
+                *buf = (((*buf & fmt->Rmask) >> fmt->Rshift) * color[0] >>
                         (8 - fmt->Rloss)) << fmt->Rshift |
-                       (((*buf & fmt->Gmask) >> fmt->Gshift) * color.g >>
+                       (((*buf & fmt->Gmask) >> fmt->Gshift) * color[1] >>
                         (8 - fmt->Gloss)) << fmt->Gshift |
-                       (((*buf & fmt->Bmask) >> fmt->Bshift) * color.b >>
+                       (((*buf & fmt->Bmask) >> fmt->Bshift) * color[2] >>
                         (8 - fmt->Bloss)) << fmt->Bshift;
             }
             buf += surface->w - rect.w;

@@ -633,6 +633,12 @@ private:
     /* Text related variables */
     AnimationInfo text_info;
     AnimationInfo sentence_font_info;
+    /* Text-plane capture state (see src/engine_bridge.h): as in ONScripter-EN,
+     * text_info's surface already holds only the sentence glyphs and shadow,
+     * transparent elsewhere. Published only when a shell asked for it. */
+    unsigned long long text_plane_serial;
+    bool text_plane_pending_restart;
+    bool text_plane_suppress;
     int  erase_text_window_mode;
     bool text_on_flag; // suppress the effect of erase_text_window_mode
     bool draw_cursor_flag;
@@ -665,7 +671,11 @@ private:
                     AnimationInfo* cache_info = 0)
         { /- for now -/ drawString(str, color, info, flush_flag,
 				   surface, rect, cache_info); }*/
-    
+
+    /* Text-plane capture (see src/engine_bridge.h). Single sink: reports
+     * `changed` (clamped to the plane) and restart. No-op with no shell. */
+    void publishTextPlane(SDL_Rect &changed, bool restart);
+
     void restoreTextBuffer();
     int  enterTextDisplayMode(bool text_flag = true);
     int  leaveTextDisplayMode(bool force_leave_flag = false);
@@ -815,6 +825,29 @@ private:
     void flushDirect(SDL_Rect &rect, int refresh_mode, bool updaterect = true);
 public:
     void executeLabel();
+
+    /* --- Total-fit line breaking (shared planner, see src/wrap.h) ----------
+     *
+     * The decision lives in the core's engine-agnostic planner so both
+     * ONScripter-EN and PONScripter break a page by the same rules. These are
+     * everything the planner needs from this engine, plus the entry point that
+     * calls it.
+     */
+    int planWrapSegment(int start, int end);
+    /* Byte size of the character at `p` (the encoding's own answer, so
+     * multi-byte and ligature text is stepped correctly). */
+    int nextCharSizeAt(const char *p);
+    /* Width of the text [from,to) in pixels: the same GlyphAdvance sum the
+     * drawing loop performs. */
+    float measureRunWidthPx(int from, int to);
+    /* Pixel width of the text area, and how much of the current line is used. */
+    float textAreaWidthPx();
+    float textCursorXPx();
+    /* Breaks chosen by planWrapSegment, ascending; num_wrap_breaks of them. */
+    int *wrap_breaks;
+    int  wrap_breaks_cap;
+    int  num_wrap_breaks;
+
 private:
     int parseLine();
 

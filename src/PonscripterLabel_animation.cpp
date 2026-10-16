@@ -25,6 +25,46 @@
 
 #include "PonscripterLabel.h"
 
+/* Published by the core through the bridge module (engine_bridge.h). */
+#ifdef __LIBRETRO__
+extern "C" {
+    extern int vnovel_textbox_opacity;
+}
+#else
+static const int vnovel_textbox_opacity = 100;
+#endif
+
+/* Scale a surface's alpha channel by `percent` (100 = unchanged), clamping to
+ * 0..255. Used only for the text-window backdrop image: blending caps its
+ * multiplier at 256, so a factor above 1.0 cannot be applied there, but it can
+ * be baked into the stored alpha. A factor of 0 makes it fully transparent and
+ * 200 doubles its alpha (clamped). Mirrors the ONScripter path. */
+static void scaleSurfaceAlpha( SDL_Surface *surface, int percent )
+{
+    if ( !surface || percent == 100 ) return;
+    SDL_PixelFormat *fmt = surface->format;
+    if ( fmt->Amask == 0 ) return;               // nothing to scale
+
+    SDL_LockSurface( surface );
+    Uint32 *buf = (Uint32 *)surface->pixels;
+    const int n = surface->w * surface->h;
+    for ( int i = 0; i < n; i++, buf++ ){
+        Uint32 a = (*buf & fmt->Amask) >> fmt->Ashift;
+        if ( fmt->Aloss != 0 ){                  // expand packed alpha to 0..255
+            a = (a * 255 + ((1u << fmt->Aloss) - 1)) >> fmt->Aloss;
+        }
+        long scaled = ((long)a * percent) / 100;
+        if ( scaled < 0 )   scaled = 0;
+        if ( scaled > 255 ) scaled = 255;
+        Uint32 packed = (Uint32)scaled;
+        if ( fmt->Aloss != 0 ){
+            packed = (packed * ((1u << fmt->Aloss) - 1) + 127) / 255;
+        }
+        *buf = (*buf & ~fmt->Amask) | ((packed << fmt->Ashift) & fmt->Amask);
+    }
+    SDL_UnlockSurface( surface );
+}
+
 int PonscripterLabel::proceedAnimation()
 {
     int i, minimum_duration = -1;
@@ -264,6 +304,13 @@ void PonscripterLabel::setupAnimationInfo(AnimationInfo* anim, Fontinfo* info)
         anim->setupImage(surface, surface_m, has_alpha);
         if (surface)   SDL_FreeSurface(surface);
         if (surface_m) SDL_FreeSurface(surface_m);
+
+        /* The text-window backdrop image is the one AnimationInfo reached as
+         * &sentence_font_info; apply the user's opacity multiplier to its baked
+         * alpha. Only when the window is in image mode -- colour backdrops have
+         * no image and are handled by the multiply in shadowTextDisplay. */
+        if (anim == &sentence_font_info && !sentence_font.is_transparent)
+            scaleSurfaceAlpha(anim->image_surface, vnovel_textbox_opacity);
     }
 }
 
