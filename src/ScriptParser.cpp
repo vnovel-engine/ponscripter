@@ -656,6 +656,16 @@ void ScriptParser::writeStr(const pstring& s, bool output_flag)
 
 pstring ScriptParser::readStr()
 {
+    /* Bounds-checked like readInt() and readChar() below, which this was missing.
+     *
+     * Without the check a truncated or short `envdata` walks the read pointer off
+     * the buffer and the pstring constructor faults on the invalid address --
+     * measured as a segfault during PonscripterLabel::loadEnvData -> readStr,
+     * before any script ran. The neighbours already guard; this now matches them
+     * and returns an empty string at the end of the buffer instead. */
+    if (file_io_buf_ptr >= file_io_buf_len)
+        return pstring("");
+
     pstring rv((const char*) file_io_buf + file_io_buf_ptr);
     file_io_buf_ptr += rv.length() + 1;
     return rv;

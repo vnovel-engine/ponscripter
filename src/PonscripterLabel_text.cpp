@@ -278,6 +278,13 @@ void PonscripterLabel::publishTextPlane(SDL_Rect &changed, bool restart)
     plane.origin_y  = sentence_font.top_y * screen_ratio1 / screen_ratio2;
     plane.restart   = restart ? 1 : 0;
     plane.serial    = ++text_plane_serial;
+    /* Placement context: as on ONScripter, this engine publishes the whole
+     * text surface (screen-sized), so the surface IS the page and there is no
+     * fragment to place. Set explicitly - the struct is filled field by field
+     * on the stack, so an unset member would carry whatever was there. */
+    plane.plane_x   = 0;
+    plane.plane_y   = 0;
+    plane.splice    = 0;
     vnovel_publish_text_plane(&plane);
 #else
     (void)changed;

@@ -3442,6 +3442,11 @@ int PonscripterLabel::allsp2hideCommand(const pstring& cmd)
 #ifdef __LIBRETRO__
 #include <stdio.h>
 
+/* Defined in the runtime module (see src/engine_bridge.h). Declared here rather
+ * than by including the header, which the engines include only where they need
+ * the plane struct - this file needs one function. */
+extern "C" void vnovel_request_text_plane_dump(const char *name);
+
 int PonscripterLabel::snapshotsaveCommand(const pstring& /*cmd*/)
 {
     pstring name = script_h.readStrValue();
@@ -3467,6 +3472,18 @@ int PonscripterLabel::dumpstateCommand(const pstring& /*cmd*/)
             fclose(f);
         }
     }
+    return RET_CONTINUE;
+}
+
+/* The plane's counterpart to snapshotsave above, which writes the engine's own
+ * frame (text already baked in) and so cannot say whether the core's copy of
+ * the plane is right. This asks the core to write the copy the seam produced
+ * (see vnovel_request_text_plane_dump). */
+int PonscripterLabel::textplanedumpCommand(const pstring& /*cmd*/)
+{
+    pstring name = script_h.readStrValue();
+    if (name.length() > 0)
+        vnovel_request_text_plane_dump((const char*)name);
     return RET_CONTINUE;
 }
 #endif

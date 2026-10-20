@@ -582,10 +582,57 @@ bool ScriptHandler::compareString(const char* buf)
 }
 
 
+/*---------------------------------------------------------------------------
+ * Text look-ahead support: a SECOND handler that parses the SAME script image
+ * read-only. See the note on the declaration in ScriptHandler.h.
+ *-------------------------------------------------------------------------*/
+void ScriptHandler::borrowFrom(const ScriptHandler& src, const char* from)
+{
+    /* Share the read-only script image and label table (the tokenizer never
+     * writes either). */
+    script_buffer        = src.script_buffer;
+    script_buffer_length = src.script_buffer_length;
+    label_info           = src.label_info;   /* copy of the vector, cheap */
+
+    current_script = from;
+    next_script    = from;
+
+    /* The scalar per-run state PONScripter's readToken consults. */
+    textgosub_flag = src.textgosub_flag;
+    linepage_flag  = src.linepage_flag;
+    clickstr_list  = src.clickstr_list;      /* copy of the std::set */
+    text_flag      = false;
+
+    /* No kidoku bookkeeping: a walk must not mark text the player has not seen
+     * (borrowFrom sets kidokuskip_flag false so markAsKidoku returns at once). */
+    kidoku_buffer   = NULL;
+    kidokuskip_flag = false;
+    skip_enabled    = false;
+
+    end_status = END_NONE;
+
+    /* utf_encoding stays NULL: the destructor only deletes it when it differs
+     * from the global file_encoding, and NULL != file_encoding, so a borrowed
+     * handler must keep it NULL rather than alias the global. */
+    utf_encoding = NULL;
+}
+
+void ScriptHandler::unhookBorrowedScript()
+{
+    script_buffer = NULL;
+    label_info.clear();
+    label_names.clear();
+}
+
 void ScriptHandler::skipLine(int no)
 {
+    /* Bounded, like ONS's (and like readStr above): the scan assumes a newline
+     * ahead, and at a script's very end that walks off the buffer. */
+    const char* end = script_buffer ? script_buffer + script_buffer_length : NULL;
     for (int i = 0; i < no; i++) {
-        while (*current_script != 0x0a) current_script++;
+        while (*current_script != 0x0a &&
+               (!end || current_script < end)) current_script++;
+        if (end && current_script >= end) break;
         current_script++;
     }
 

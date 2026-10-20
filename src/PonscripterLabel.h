@@ -111,6 +111,7 @@ public:
     void dumpState(FILE *f);
     int snapshotsaveCommand(const pstring& cmd);
     int dumpstateCommand(const pstring& cmd);
+    int textplanedumpCommand(const pstring& cmd);
 #endif
    
     // ----------------------------------------

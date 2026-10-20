@@ -191,6 +191,30 @@ public:
     bool isKidoku();
     void markAsKidoku(const char* address = NULL);
     void setKidokuskip(bool kidokuskip_flag);
+    /* The matching read, plus the script base and pretext accessors, needed by
+     * the shared text look-ahead (ONScripterLookAhead.h). PONScripter shipped
+     * only the setter and no base accessor; rather than have the shared walk
+     * reach into members, the same small accessors ONScripter has are provided
+     * here. */
+    inline bool getKidokuskip(){ return kidokuskip_flag; };
+    inline const char *getScriptBuffer(){ return script_buffer; };
+    /* The token buffer and text flag are OVERWRITTEN by readToken, and the text
+     * look-ahead (ONScripterLookAhead.h) calls readToken while the engine is
+     * between reading a line and dispatching it. These let the walk put both
+     * back so the engine's own line survives; pushCurrent/popCurrent restore
+     * only the position. PONScripter distinguishes text by text_flag rather than
+     * a command type, so that is what the pair carries. */
+    /* Returns the CURRENT token buffer for reading only; the walk keeps its own
+     * copy (see ONScripterLookAhead.h) rather than having this class hold one,
+     * because an extra pstring member here double-frees in PONScripter's
+     * destructor (measured: abort in retro_unload_game). */
+    inline const char *getToken() { return (const char*)string_buffer; };
+    inline int  getCmdType(){ return text_flag ? 1 : 0; };
+    inline void setCmdType( int t ){ text_flag = (t != 0); };
+    /* PONScripter has no pretext concept: text and command are distinguished by
+     * isText() alone. Reporting false keeps the shared walk's test
+     * (`isText() || pretext()`) correct for this engine. */
+    inline bool isPretext(){ return false; };
     void saveKidokuData();
     void loadKidokuData();
 
@@ -207,6 +231,16 @@ public:
     pstring stringFromInteger(int no, int num_column,
 			     bool is_zero_inserted = false, bool do_wide = false);
     
+    /* Text look-ahead (ONScripterLookAhead.h): let a SECOND handler parse the
+     * SAME script image, read-only, without disturbing this one -- the KiriKiri
+     * `assign(live)` analogue. See the matching note in ONScripter's header for
+     * why (running the tokenizer on the live handler disturbs the running game).
+     * Shares the read-only script image and label table and copies the per-run
+     * scalar state the tokenizer reads. A borrow, not a copy: must not outlive
+     * the source, and must never be used to RUN a script. */
+    void borrowFrom(const ScriptHandler& src, const char* from);
+    void unhookBorrowedScript(); /* release the shared image before destruction */
+
     int readScriptSub(FILE* fp, char** buf, int encrypt_mode, bool is_utf=false);
     int readScript(DirPaths *path, const char* prefer_name);
     int labelScript();

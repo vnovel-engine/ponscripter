@@ -280,6 +280,7 @@ sfunc_lut_t::sfunc_lut_t() {
 #ifdef __LIBRETRO__
     dict["snapshotsave"]     = &PonscripterLabel::snapshotsaveCommand;
     dict["dumpstate"]        = &PonscripterLabel::dumpstateCommand;
+    dict["textplanedump"]    = &PonscripterLabel::textplanedumpCommand;
 #endif
     dict["savescreenshot2"]  = &PonscripterLabel::savescreenshotCommand;
     dict["savetime"]         = &PonscripterLabel::savetimeCommand;
@@ -1420,6 +1421,27 @@ void PonscripterLabel::executeLabel()
             setSkipMode(false);
 
         const char* current = script_h.getCurrent();
+
+        /* Text look-ahead (PONScripterLookAhead.cpp).
+         *
+         * HERE, once per line before EITHER parseLine runs, and deliberately
+         * not inside a parseLine: PONScripter dispatches through two --
+         * ScriptParser::parseLine() handles commands and returns RET_NOMATCH for
+         * text, and PonscripterLabel::parseLine() then runs the text. A hook in
+         * the second saw a position already advanced by the first, so the walk
+         * saved and restored different positions on the two passes and published
+         * the same page twice (measured: PAGE(99) logged twice). At the top of
+         * the loop there is one call per line, at the position about to be
+         * dispatched, which is what the covered guard expects.
+         *
+         * The walk saves and restores the interpreter position itself, so the
+         * dispatch below is unaffected. It must never break the run. */
+        {
+            extern int PonscripterLabelLookAhead( ScriptHandler &sh );
+            try { PonscripterLabelLookAhead( script_h ); }
+            catch (...) { /* the look-ahead must never break the run */ }
+        }
+
         int ret = ScriptParser::parseLine();
         if (ret == RET_NOMATCH) ret = this->parseLine();
 
@@ -1479,6 +1501,7 @@ bool PonscripterLabel::check_orphan_control()
 int PonscripterLabel::parseLine()
 {
     int ret = 0;
+
     pstring cmd = script_h.getStrBuf();
     bool is_orig_cmd = false;
     if (cmd[0] == '_') {
