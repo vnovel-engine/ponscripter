@@ -38,6 +38,36 @@
 
 // This sets up the fadeout event flag for use in mp3 fadeout.  Recommend for integration.  [Seung Park, 20060621]
 #define ONS_FADE_EVENT (SDL_USEREVENT + 6)
+/* The shell's navigation-result publisher (engine_bridge.c). Declared by hand
+ * for the same reason vnovel_publish_text_run is in ONScripterLookAhead.h: the
+ * engine compiles without the shell's headers. */
+extern "C" void vnovel_publish_nav_result( int ordinal, int accepted );
+/* The page-flow publishers and kinds. In a libretro build the real header
+ * (engine_bridge.h) supplies them and its publishers are either real or inline
+ * no-ops depending on VNOVEL_DEVWIRE, so hand-declaring them here would collide.
+ * Only a standalone engine (no shell) needs the spelling, and there nothing
+ * calls them. */
+#ifndef VNOVEL_BRIDGE_SUPPLIES_FLOW
+/* A standalone engine has no shell to publish to, and a libretro build without
+ * VNOVEL_DEVWIRE has no wire protocol: in both the calls must vanish rather than
+ * name a symbol nothing defines. See src/engine_bridge.h for the same contract on
+ * the header side. */
+#ifdef VNOVEL_DEVWIRE
+extern "C" void vnovel_publish_page_event( int event );
+#else
+static inline void vnovel_publish_page_event( int ) {}
+#endif
+#endif
+#ifndef VNOVEL_BRIDGE_SUPPLIES_FLOW
+/* The page-event vocabulary, spelled for a standalone engine (a libretro build
+ * gets them from engine_bridge.h, whose names these match -- one list). */
+#define VNOVEL_EV_PAGE_START 0
+#define VNOVEL_EV_PAGE_END   1
+#define VNOVEL_EV_LINE_PAUSE 2
+#define VNOVEL_EV_PAGE_PAUSE 3
+#define VNOVEL_EV_RESUME     4
+#endif
+
 
 #define EDIT_MODE_PREFIX "[EDIT MODE]  "
 #define EDIT_SELECT_STRING "MP3 vol (m)  SE vol (s)  Voice vol (v)  Numeric variable (n)"
@@ -1148,8 +1178,17 @@ void PonscripterLabel::timerEvent(void)
 
             executeSystemCall();
         }
-        else
+        else {
+            /* Page-flow resume: this is the only re-entry into the script after
+             * a reader wait. clickstr_state is CLICK_WAIT/CLICK_NEWPAGE only
+             * while a page armed by doClickEnd is still on screen (it is reset
+             * to CLICK_NONE inside executeLabel, by processText, AFTER this
+             * point), so an effect/animation/timer wait — whose
+             * clickstr_state is CLICK_NONE — cannot fire this. */
+            if (clickstr_state == CLICK_WAIT || clickstr_state == CLICK_NEWPAGE)
+                vnovel_publish_page_event( VNOVEL_EV_RESUME );
             executeLabel();
+        }
     }
 
     volatile_button_state.button = 0;
@@ -1275,6 +1314,38 @@ int PonscripterLabel::eventLoop()
         case SDL_QUIT:
             endCommand("end");
             break;
+
+        case PONS_SELECT_EVENT: {
+            /* Development socket's `select N`: take the Nth choice a page
+             * offers, the way a left-click would, but without going through
+             * the input layers. The ordinal (1-based, page order) rides in
+             * event.user.code. A click on select only sets the button state
+             * (mousePressEvent: current_button_state.button =
+             * current_over_button) and calls advancePhase(); selectCommand
+             * then resolves the number on the next phase. So the direct
+             * equivalent is to make that same state change while the select
+             * machinery is waiting.
+             *
+             * Accept only when select is actually waiting (event_mode &
+             * WAIT_BUTTON_MODE) AND the ordinal exists as a key in `buttons`
+             * (selectCommand populates buttons[counter], counter from 1).
+             * On refusal change no state. Never errorAndExit on a bad
+             * ordinal - a refusal is reported, not thrown. */
+            int ordinal = event.user.code;
+            int accepted = 0;
+            if ( (event_mode & WAIT_BUTTON_MODE)
+                 && buttons.find(ordinal) != buttons.end() ){
+                current_button_state.button  = ordinal;
+                volatile_button_state.button = ordinal;
+                current_button_state.down_flag = false;
+                playClickVoice();
+                stopAnimation(clickstr_state);
+                advancePhase();
+                accepted = 1;
+            }
+            vnovel_publish_nav_result(ordinal, accepted);
+            break;
+        }
 
         default:
             break;

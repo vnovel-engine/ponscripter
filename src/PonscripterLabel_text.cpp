@@ -24,12 +24,46 @@
  */
 
 #include "PonscripterLabel.h"
+/* The shell's page-flow edge publisher (engine_bridge.c). Declared by hand for
+ * the same reason vnovel_publish_text_run is in ONScripterLookAhead.h: the
+ * engine compiles without the shell's headers. */
+
+/* The page-flow publishers and kinds. In a libretro build the real header
+ * (engine_bridge.h) supplies them and its publishers are either real or inline
+ * no-ops depending on VNOVEL_DEVWIRE, so hand-declaring them here would collide.
+ * Only a standalone engine (no shell) needs the spelling, and there nothing
+ * calls them. */
+#ifndef VNOVEL_BRIDGE_SUPPLIES_FLOW
+/* The page-event vocabulary, spelled for a standalone engine (a libretro build
+ * gets them from engine_bridge.h, whose names these match -- one list). */
+#define VNOVEL_EV_PAGE_START 0
+#define VNOVEL_EV_PAGE_END   1
+#define VNOVEL_EV_LINE_PAUSE 2
+#define VNOVEL_EV_PAGE_PAUSE 3
+#define VNOVEL_EV_RESUME     4
+#endif
+
 
 /* Text-plane sink (see src/engine_bridge.h). Included only in the libretro
  * build: a standalone engine has no shell to publish to, so publishTextPlane
  * compiles to nothing there. */
 #ifdef __LIBRETRO__
 #include "engine_bridge.h"
+
+/* The publishers and kinds: the header above supplies them when it is
+ * included (real prototypes, or inline no-ops without VNOVEL_DEVWIRE), so this
+ * is only for a standalone engine that has no shell to publish to. */
+#ifndef VNOVEL_BRIDGE_SUPPLIES_FLOW
+/* A standalone engine has no shell to publish to, and a libretro build without
+ * VNOVEL_DEVWIRE has no wire protocol: in both the calls must vanish rather than
+ * name a symbol nothing defines. See src/engine_bridge.h for the same contract on
+ * the header side. */
+#ifdef VNOVEL_DEVWIRE
+extern "C" void vnovel_publish_page_event( int event );
+#else
+static inline void vnovel_publish_page_event( int ) {}
+#endif
+#endif
 #endif
 
 Glyph
@@ -394,6 +428,14 @@ int PonscripterLabel::leaveTextDisplayMode(bool force_leave_flag)
 void PonscripterLabel::doClickEnd()
 {
     skip_to_wait = 0;
+    /* Page-flow pause: doClickEnd is reached only from clickWait()
+     * (CLICK_WAIT) and clickNewPage() (CLICK_NEWPAGE) — the page is drawn and
+     * the reader must click. Automode/autoclick arm the same page wait with a
+     * timer, so they pause too; a typewriter or effect wait never comes
+     * through here. The resume (publish 0) is in timerEvent(), at the
+     * executeLabel() re-entry guarded by the same clickstr_state. */
+    vnovel_publish_page_event( clickstr_state == CLICK_NEWPAGE
+                                    ? VNOVEL_EV_PAGE_PAUSE : VNOVEL_EV_LINE_PAUSE );
 
     if (automode_flag) {
         event_mode = WAIT_TEXT_MODE | WAIT_INPUT_MODE | WAIT_VOICE_MODE;
@@ -507,6 +549,11 @@ int PonscripterLabel::clickNewPage(bool display_char)
             return RET_CONTINUE;
         }
 
+        /* The page ENDS here, before the wait: doClickEnd() is the reader
+         * waiting, which is its own signal (a PAUSE). The boundary is what a
+         * consumer marks, and a game that ran pages together without waiting
+         * would still reach this line. */
+        vnovel_publish_page_event( VNOVEL_EV_PAGE_END );
         doClickEnd();
     }
 

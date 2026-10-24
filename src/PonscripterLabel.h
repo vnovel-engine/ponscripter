@@ -38,6 +38,14 @@
 #else
 #include <smpeg.h>
 #endif
+/* Private SDL user event for the development socket's `select N` intent.
+ * The engine's event loop (PonscripterLabel_event.cpp) and the C ABI wrapper
+ * (engine_pons_cabi.cpp) both see it through this header. The ONS_*_EVENT
+ * codes spend SDL_USEREVENT through SDL_USEREVENT+6 (see _event.cpp); reserving
+ * +9 (not +7) keeps this in lockstep with ONScripter, whose engine uses +7 and
+ * +8. The vendored SDL stores any type in SDL_AddEvent with no range check and
+ * SDL_WaitEvent peeks with SDL_ALLEVENTS, so a value above 32 is safe. */
+#define PONS_SELECT_EVENT (SDL_USEREVENT + 9)
 
 #define DEFAULT_VIDEO_SURFACE_FLAG (SDL_SWSURFACE)
 

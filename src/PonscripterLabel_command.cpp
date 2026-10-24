@@ -29,6 +29,35 @@ extern "C" void libretro_script_error_longjmp(void);
 #include "PonscripterLabel.h"
 #include "version.h"
 
+/* The page-flow publishers and kinds. In a libretro build the real header
+ * (engine_bridge.h) supplies them and its publishers are either real or inline
+ * no-ops depending on VNOVEL_DEVWIRE, so hand-declaring them here would collide.
+ * Only a standalone engine (no shell) needs the spelling, and there nothing
+ * calls them. */
+#ifndef VNOVEL_BRIDGE_SUPPLIES_FLOW
+/* A standalone engine has no shell to publish to, and a libretro build without
+ * VNOVEL_DEVWIRE has no wire protocol: in both the calls must vanish rather than
+ * name a symbol nothing defines. See src/engine_bridge.h for the same contract on
+ * the header side. */
+#ifdef VNOVEL_DEVWIRE
+extern "C" void vnovel_publish_page_event( int event );
+extern "C" void vnovel_publish_choice_label( int ordinal, const char *label );
+#else
+static inline void vnovel_publish_page_event( int ) {}
+static inline void vnovel_publish_choice_label( int, const char * ) {}
+#endif
+#endif
+#ifndef VNOVEL_BRIDGE_SUPPLIES_FLOW
+/* The page-event vocabulary, spelled for a standalone engine (a libretro build
+ * gets them from engine_bridge.h, whose names these match -- one list). */
+#define VNOVEL_EV_PAGE_START 0
+#define VNOVEL_EV_PAGE_END   1
+#define VNOVEL_EV_LINE_PAUSE 2
+#define VNOVEL_EV_PAGE_PAUSE 3
+#define VNOVEL_EV_RESUME     4
+#endif
+
+
 #ifdef WIN32
 #include <direct.h>
 #include <windows.h>
@@ -881,6 +910,10 @@ int PonscripterLabel::selectCommand(const pstring& cmd)
 	const int button = current_button_state.button - 1;
         if (button < 0) return RET_WAIT | RET_REREAD;
 
+        /* The reader acted: this re-entry resolves the choice, so the pause that
+         * was armed when it was offered has ended. */
+        vnovel_publish_page_event( VNOVEL_EV_RESUME );
+
 	playSound(selectvoice_file_name[SELECTVOICE_SELECT],
 		  SOUND_WAVE | SOUND_OGG, false, MIX_WAVE_CHANNEL);
 
@@ -1002,6 +1035,28 @@ int PonscripterLabel::selectCommand(const pstring& cmd)
         advancePhase();
         refreshMouseOverButton();
 
+        /* This IS a reader text pause: the page is on screen and the reader
+         * must choose. It does not route through doClickEnd (selectCommand
+         * returns RET_WAIT and re-enters on the next phase), so the edge is
+         * published here. Without it a shell never learns the choice page was
+         * reached, and a look-ahead consumer that reveals pages on a pause would
+         * hold every choice page in its queue forever. */
+        vnovel_publish_page_event( VNOVEL_EV_PAGE_PAUSE );
+        /* WHAT the choices are. A `select`'s labels are its own list, and they
+         * may not appear in the page's text at all (a select whose buttons are
+         * drawn from a `btndef` image, or one reached without the labels having
+         * been printed). The ordinal is the list position, which is what `select
+         * N` takes and what the engine's own counter uses to build the buttons
+         * just above. */
+        {
+            int counter = 1;
+            for (SelectElt::iterator it = select_links.begin();
+                 it != select_links.end(); ++it) {
+                if (it->text && it->text[0])
+                    vnovel_publish_choice_label(counter, it->text);
+                ++counter;
+            }
+        }
         return RET_WAIT | RET_REREAD;
     }
 }
@@ -2989,6 +3044,7 @@ int PonscripterLabel::btnwaitCommand(const pstring& cmd)
                  || (draw_one_page_flag && clickstr_state == CLICK_WAIT)
                  || ctrl_pressed_status;
     if (event_mode & WAIT_BUTTON_MODE || (textbtn_flag && skipping)) {
+        vnovel_publish_page_event( VNOVEL_EV_RESUME );  /* the reader acted: the menu wait ended */
         btnwait_time  = SDL_GetTicks() - internal_button_timer;
         btntime_value = 0;
         num_chars_in_sentence = 0;
@@ -3032,6 +3088,10 @@ int PonscripterLabel::btnwaitCommand(const pstring& cmd)
 
         event_mode = WAIT_BUTTON_MODE;
         refreshMouseOverButton();
+        /* A button menu is a reader wait with choices, like select: publish the
+         * pause so a consumer can offer its options as selectables. */
+        vnovel_publish_page_event( clickstr_state == CLICK_NEWPAGE
+                                    ? VNOVEL_EV_PAGE_PAUSE : VNOVEL_EV_LINE_PAUSE );
 
         if (btntime_value > 0) {
             if (btntime2_flag) event_mode |= WAIT_VOICE_MODE;

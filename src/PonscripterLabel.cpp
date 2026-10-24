@@ -37,6 +37,33 @@ static const int vnovel_textbox_opacity = 100;
 #endif
 #include "PonscripterLabel.h"
 
+/* The page-flow publishers and kinds. In a libretro build the real header
+ * (engine_bridge.h) supplies them and its publishers are either real or inline
+ * no-ops depending on VNOVEL_DEVWIRE, so hand-declaring them here would collide.
+ * Only a standalone engine (no shell) needs the spelling, and there nothing
+ * calls them. */
+#ifndef VNOVEL_BRIDGE_SUPPLIES_FLOW
+/* A standalone engine has no shell to publish to, and a libretro build without
+ * VNOVEL_DEVWIRE has no wire protocol: in both the calls must vanish rather than
+ * name a symbol nothing defines. See src/engine_bridge.h for the same contract on
+ * the header side. */
+#ifdef VNOVEL_DEVWIRE
+extern "C" void vnovel_publish_page_event( int event );
+#else
+static inline void vnovel_publish_page_event( int ) {}
+#endif
+#endif
+#ifndef VNOVEL_BRIDGE_SUPPLIES_FLOW
+/* The page-event vocabulary, spelled for a standalone engine (a libretro build
+ * gets them from engine_bridge.h, whose names these match -- one list). */
+#define VNOVEL_EV_PAGE_START 0
+#define VNOVEL_EV_PAGE_END   1
+#define VNOVEL_EV_LINE_PAUSE 2
+#define VNOVEL_EV_PAGE_PAUSE 3
+#define VNOVEL_EV_RESUME     4
+#endif
+
+
 /* Text-rendering flags published by the core (see src/engine_bridge.h). The
  * same switch gates ONScripter-EN's planner, so one option governs both. */
 extern "C" {
@@ -1437,8 +1464,9 @@ void PonscripterLabel::executeLabel()
          * The walk saves and restores the interpreter position itself, so the
          * dispatch below is unaffected. It must never break the run. */
         {
-            extern int PonscripterLabelLookAhead( ScriptHandler &sh );
-            try { PonscripterLabelLookAhead( script_h ); }
+            extern int PonscripterLabelLookAhead( ScriptHandler &sh,
+                                                  const Fontinfo &font );
+            try { PonscripterLabelLookAhead( script_h, sentence_font ); }
             catch (...) { /* the look-ahead must never break the run */ }
         }
 
@@ -1796,6 +1824,13 @@ void PonscripterLabel::shadowTextDisplay(SDL_Surface* surface, SDL_Rect &clip)
 
 void PonscripterLabel::newPage(bool next_flag)
 {
+    /* A page BOUNDARY (start), told apart from the reader wait. Every page of
+     * PON's text opens through here -- the click commands, the page-forward
+     * commands and the page display alike -- so this one point covers them, and
+     * a consumer can mark where the game began a fresh page. See the note in
+     * ONScripterLabel_text.cpp::clickNewPage for why the boundary is not the
+     * pause. */
+    vnovel_publish_page_event( VNOVEL_EV_PAGE_START );
     /* ---------------------------------------- */
     /* Set forward the text buffer */
     if (!current_text_buffer->empty()) {
