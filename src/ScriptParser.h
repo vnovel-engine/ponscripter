@@ -125,6 +125,10 @@ public:
     int rubyoffCommand(const pstring& cmd);
     int roffCommand(const pstring& cmd);
     int rmenuCommand(const pstring& cmd);
+    /* The right-click menu, built a piece at a time: `rmenu` replaces the whole
+     * list, `insertmenu` appends one entry, `resetmenu` empties it. */
+    int insertmenuCommand(const pstring& cmd);
+    int resetmenuCommand(const pstring& cmd);
     int returnCommand(const pstring& cmd);
     int pretextgosubCommand(const pstring& cmd);
     int numaliasCommand(const pstring& cmd);
@@ -222,7 +226,13 @@ protected:
 		   SYSTEM_MENU        = 7,
 		   SYSTEM_YESNO       = 8,
 		   SYSTEM_AUTOMODE    = 9,
-		   SYSTEM_END         = 10 };
+		   SYSTEM_END         = 10,
+		   /* The menubar's text-speed entries (NScripter's TEXTSLOW /
+		      TEXTMIDDLE / TEXTFAST). Added past the engine's own numbers so a
+		      saved system_menu_mode cannot change meaning. */
+		   SYSTEM_TEXTSPEED_SLOW   = 11,
+		   SYSTEM_TEXTSPEED_MIDDLE = 12,
+		   SYSTEM_TEXTSPEED_FAST   = 13 };
     typedef dictionary<pstring, syscall>::t syscall_dict_t;
     syscall_dict_t syscall_dict;
     

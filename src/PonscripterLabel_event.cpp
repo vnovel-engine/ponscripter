@@ -68,6 +68,14 @@ static inline void vnovel_publish_page_event( int ) {}
 #define VNOVEL_EV_RESUME     4
 #endif
 
+/* The core's menu bar (src/menu.h). Not gated on the wire protocol: the menu is
+ * part of the core either way, and a standalone engine has no core at all. */
+#ifdef __LIBRETRO__
+extern "C" int vnovel_menu_take_pick(void);
+#else
+static inline int vnovel_menu_take_pick(void) { return 0; }
+#endif
+
 
 #define EDIT_MODE_PREFIX "[EDIT MODE]  "
 #define EDIT_SELECT_STRING "MP3 vol (m)  SE vol (s)  Voice vol (v)  Numeric variable (n)"
@@ -322,6 +330,13 @@ void PonscripterLabel::flushEvent()
     SDL_Event event;
     while (SDL_PollEvent(&event))
         flushEventSub(event);
+
+    /* No core requests are taken here. This engine calls flushEvent() only from
+     * inside executeSystemMenu (PonscripterLabel_rmenu.cpp), so anything placed
+     * here would run only while a menu is already open. The core's pick and
+     * hot-zone requests are taken in eventLoop(), which is the engine's real
+     * event pump -- and which also means they arrive without needing a rebuild of
+     * the engine's understanding of where its own frame boundary is. */
 }
 
 
@@ -1205,6 +1220,23 @@ int PonscripterLabel::eventLoop()
     advancePhase();
 
     while (SDL_WaitEvent(&event)) {
+        /* A pick from the CORE's menu bar (src/menu.h): the reader chose one of
+         * this game's own entries there, and the code is this engine's system-call
+         * number. Delivered as the same button state a real selection produces, so
+         * it goes through executeSystemCall exactly as a click does.
+         *
+         * Taken here, at the top of the engine's real event loop, because this
+         * loop blocks in SDL_WaitEvent: anything in flushEvent() would run only
+         * from inside executeSystemMenu (PonscripterLabel_rmenu.cpp). */
+        if (event_mode & (WAIT_TEXT_MODE | WAIT_BUTTON_MODE)) {
+            int pick = vnovel_menu_take_pick();
+            if (pick != 0) {
+                system_menu_mode = pick;
+                current_button_state.button = pick;
+                volatile_button_state.button = pick;
+            }
+        }
+
         // ignore continous SDL_MOUSEMOTION
         while (event.type == SDL_MOUSEMOTION) {
             if (SDL_PeepEvents(&tmp_event, 1, SDL_PEEKEVENT, SDL_ALLEVENTS) == 0) break;

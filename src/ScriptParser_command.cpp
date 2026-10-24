@@ -25,6 +25,27 @@
 #include "ScriptParser.h"
 #include <math.h>
 
+/* The core's menu bar (src/menu.h, menu.cpp). Declared by hand for the same
+ * reason every other bridge symbol is: the engine compiles without the shell's
+ * headers, and a standalone engine has no core at all.
+ *
+ * These are NOT gated on the wire protocol: the menu bar is part of the core
+ * whether or not the dev socket is compiled in, so an engine that feeds it is
+ * correct either way. A standalone build has no core at all, which is why the
+ * no-op here is the fallback -- and `__LIBRETRO__` is the flag the build
+ * already defines for exactly that distinction. */
+#ifdef __LIBRETRO__
+extern "C" void vnovel_menu_begin_entries(void);
+extern "C" void vnovel_menu_add_entry(const char *label, int id, int depth);
+extern "C" void vnovel_menu_end_entries(void);
+extern "C" int  vnovel_menu_take_pick(void);
+#else
+static inline void vnovel_menu_begin_entries(void) {}
+static inline void vnovel_menu_add_entry(const char *, int, int) {}
+static inline void vnovel_menu_end_entries(void) {}
+static inline int  vnovel_menu_take_pick(void) { return 0; }
+#endif
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -307,6 +328,72 @@ int ScriptParser::rmenuCommand(const pstring& cmd)
 }
 
 
+/* insertmenu "text",FUNCTIONCODE[,depth]
+ *
+ * ONE ENTRY OF THE GAME'S CUSTOM MENU -- and that menu is NOT the right-click
+ * one. The two are separate systems and this is the distinction the names hide:
+ *
+ *   rmenu                             the right-click menu (save/load/skip/...)
+ *   resetmenu + insertmenu            the game's OWN menu, a menubar built entry
+ *                                     by entry
+ *
+ * Le sanglot uses both, in that order: `rmenu` at line 90 declares its six
+ * right-click entries, and `resetmenu` at line 93 then announces the custom menu
+ * and 23 `insertmenu`s follow. Reading resetmenu as "clear the right-click menu"
+ * is what previously made us wipe those six entries and put the 23 configuration
+ * entries in their place -- so a right-click showed a flattened, reversed copy of
+ * the wrong list. `resetmenu` touches only this menu; see resetmenuCommand.
+ *
+ * The optional third argument is a SUBMENU DEPTH, in the sense the script's own
+ * comment gives: "数字がある場合、それはその数だけ掘ったサブメニューへの挿入を意
+ * 味する" -- "if there is a number, it means insertion into a submenu dug that
+ * many levels deep". So an entry at depth N belongs to the nearest entry before
+ * it at depth N-1, which is what the core's tree builder does. `SUB` (a code the
+ * script uses to open a submenu) is just a label at the parent depth with no code
+ * of its own, and it is what the depth-1 and depth-2 runs hang from: Wave's two
+ * options at depth 2 have no depth-1 parent other than `SUB` itself.
+ *
+ * Order: "常に先頭に挿入される" -- always inserted at the beginning. The engine's
+ * own list would insert at the head, but that list is not what this feeds; the
+ * core's tree is built in arrival order, which is the order the script declared
+ * and the order a menubar reads in. So the entries go over in arrival order and
+ * the script's own top-level order is preserved.
+ *
+ * The code is this engine's system-call number, resolved from the same dictionary
+ * rmenu and systemcall use; getSystemCallNo yields -1 for a code the engine does
+ * not know, which is passed on as 0 -- "no code", a heading. See
+ * ScriptParser::getSystemCallNo for why an unknown code is not an error here. */
+int ScriptParser::insertmenuCommand(const pstring& cmd)
+{
+    pstring label = script_h.readStrValue();
+    int syscall_no = getSystemCallNo(script_h.readStrValue());
+
+    int depth = 0;
+    if (script_h.hasMoreArgs())
+        depth = script_h.readIntValue();
+    if (depth < 0)
+        depth = 0;
+
+    vnovel_menu_add_entry((const char *)label, syscall_no, depth);
+
+    return RET_CONTINUE;
+}
+
+
+/* resetmenu
+ *
+ * Declare that the game's own custom menu begins here ("declare customizations
+ * for the top menubar"). It does NOT touch the right-click menu: that one was
+ * set by rmenu and keeps its entries. Only the core's menu list is started
+ * afresh, so the inserts that follow build a new one. */
+int ScriptParser::resetmenuCommand(const pstring& cmd)
+{
+    (void)cmd;
+    vnovel_menu_begin_entries();
+    return RET_CONTINUE;
+}
+
+
 int ScriptParser::returnCommand(const pstring& cmd)
 {
     if (nest_infos.empty() ||
@@ -548,6 +635,12 @@ int ScriptParser::midCommand(const pstring& cmd)
 
 int ScriptParser::menusetwindowCommand(const pstring& cmd)
 {
+    /* The script has finished declaring its menu (this command configures the
+     * menu WINDOW, so it comes after the entries). That makes it the end of the
+     * list, and the core rebuilds its menu tree once here rather than after every
+     * entry -- see vnovel_menu_end_entries. */
+    vnovel_menu_end_entries();
+
     int s1 = script_h.readIntValue();
     int s2 = script_h.readIntValue();
     menu_font.set_size(s1 > s2 ? s1 : s2);

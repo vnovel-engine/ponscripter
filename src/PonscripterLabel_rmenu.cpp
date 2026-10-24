@@ -120,6 +120,15 @@ void PonscripterLabel::executeSystemCall()
     case SYSTEM_END:
         executeSystemEnd();
         break;
+    case SYSTEM_TEXTSPEED_SLOW:
+    case SYSTEM_TEXTSPEED_MIDDLE:
+    case SYSTEM_TEXTSPEED_FAST:
+        /* Same three steps the keyboard's 1/2/3 choose, and the same field they
+         * write, so the two ways of setting the speed cannot disagree. */
+        text_speed_no = system_menu_mode - SYSTEM_TEXTSPEED_SLOW;
+        sentence_font.wait_time = -1;
+        leaveSystemCall();
+        break;
     default:
         leaveSystemCall();
     }

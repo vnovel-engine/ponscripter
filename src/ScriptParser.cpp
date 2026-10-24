@@ -138,6 +138,10 @@ func_lut_t::func_lut_t() {
     dict["pretextgosub"]    = &ScriptParser::pretextgosubCommand;
     dict["return"]          = &ScriptParser::returnCommand;
     dict["rmenu"]           = &ScriptParser::rmenuCommand;
+    /* The menu built a piece at a time, which is what a real script uses (23
+     * calls in Le sanglot, against one `rmenu`). */
+    dict["insertmenu"]      = &ScriptParser::insertmenuCommand;
+    dict["resetmenu"]       = &ScriptParser::resetmenuCommand;
     dict["roff"]            = &ScriptParser::roffCommand;
     dict["rubyoff"]         = &ScriptParser::rubyoffCommand;
     dict["rubyon"]          = &ScriptParser::rubyonCommand;
@@ -196,7 +200,26 @@ ScriptParser::ScriptParser()
     syscall_dict["windowerase"] = SYSTEM_WINDOWERASE;
     syscall_dict["rmenu"]       = SYSTEM_MENU;
     syscall_dict["automode"]    = SYSTEM_AUTOMODE;
+    /* The menubar's spelling of the same action. Its code names in general are
+     * the game's own coinage (this script uses END, AUTO, SKIP), so an alias is
+     * expected rather than a surprise -- the dictionary is the engine's, the
+     * vocabulary is the script's. */
+    syscall_dict["auto"]        = SYSTEM_AUTOMODE;
     syscall_dict["end"]         = SYSTEM_END;
+
+    /* What the game's custom menubar uses, mapped to what the engine actually
+     * has. These are the menubar's text-speed entries; NScripter's own name for
+     * the setting is `defaultspeed <slow>,<default>,<fast>`, which this engine
+     * parses, and the keyboard's 1/2/3 set the same three. So a pick here is
+     * exactly a speed choice, in the same three steps the engine already has.
+     *
+     * Everything else a game's menubar can name (wave/CD toggles, fullscreen,
+     * the font dialog, the about box) is deliberately NOT registered: the menu
+     * shows those entries, but greyed, rather than offering an action that would
+     * do nothing. Adding a code here is what makes one live. */
+    syscall_dict["textslow"]    = SYSTEM_TEXTSPEED_SLOW;
+    syscall_dict["textmiddle"]  = SYSTEM_TEXTSPEED_MIDDLE;
+    syscall_dict["textfast"]    = SYSTEM_TEXTSPEED_FAST;
 }
 
 
@@ -492,6 +515,24 @@ int ScriptParser::parseLine()
 int ScriptParser::getSystemCallNo(const pstring& buffer)
 {
     syscall_dict_t::iterator e = syscall_dict.find(buffer);
+    if (e == syscall_dict.end()) {
+        /* The dictionary's keys are lower case, and so are the ones `rmenu` and
+         * `systemcall` use in the engine's own games -- but a script's custom
+         * menubar is written in capitals (`insertmenu "^Passer ce chapitre",SKIP`,
+         * `END`, `AUTO`, ...), which the case-sensitive lookup missed. That made
+         * entries the engine CAN perform unusable: `SKIP` never resolved to
+         * SYSTEM_SKIP, so Skip/Quit/Automatic were dead. Folded rather than
+         * duplicating every key, so the two spellings cannot drift apart.
+         *
+         * ASCII only, deliberately: these codes are engine keywords, never
+         * display text. */
+        pstring folded(buffer);
+        char *p = folded.mutable_data();
+        for (; p && *p; p++)
+            if (*p >= 'A' && *p <= 'Z')
+                *p = (char)(*p - 'A' + 'a');
+        e = syscall_dict.find(folded);
+    }
     if (e != syscall_dict.end()) {
 	return e->second;
     }
