@@ -32,10 +32,15 @@
 #include "ScriptHandler.h"
 #include "resources.h"
 #include <math.h>
+#include <limits.h>
 
 #ifdef __LIBRETRO__
 extern "C" void libretro_script_error_longjmp(void);
 #endif
+
+/* The user's font choice and the size/tint settings (engine_bridge.h), with the
+ * no-op fallback for a standalone engine. */
+#include "vnovel_font_api.h"
 
 int screen_ratio1 = 1, screen_ratio2 = 1;
 
@@ -115,6 +120,31 @@ Font* FontsStruct::font(int style)
     size_t len;
     FILE* fp = NULL;
     int n=0;
+
+    /* The user's chosen face wins over every game-supplied font file, which is
+     * the point of the option. The face is a FILE in the engine data directory
+     * (see vnovel_font_dir in engine_bridge.h), so it resolves exactly like a
+     * game font does and can be replaced by the user. A face that is selected
+     * but unreadable falls through to the game's font rather than failing the
+     * run on an option the user can reset. */
+    char user_face[PATH_MAX];
+    const char *user_face_name = NULL;
+    if (vnovel_font_selected_path(user_face, (int)sizeof(user_face),
+                                  &user_face_name)) {
+        FILE *probe = fopen(user_face, "rb");
+        if (!probe) {
+            fprintf(stderr, "font: selected face '%s' is unreadable; using the "
+                            "game font\n",
+                    user_face_name ? user_face_name : user_face);
+        } else {
+            fclose(probe);
+            font_[style] = new Font(user_face, (const char*) NULL);
+            if (font_[style]) {
+                font_[style]->set_size(26);
+                return font_[style];
+            }
+        }
+    }
 
     while ((fp == NULL) && (n<path->get_num_paths())) {
         pstring curpath = path->get_path(n++);
@@ -217,6 +247,10 @@ void Fontinfo::reset()
     is_bidirect = false;
     clear();
     font_size = 26;
+    /* The default size is itself a script-establishable value (a game that
+     * never calls setwindow still gets this), so it is the base until the
+     * script says otherwise. */
+    unscaled_font_size = font_size;
     color.set(0xff);
     is_bold   = true;
     is_shadow = true;
@@ -262,6 +296,28 @@ float Fontinfo::GlyphAdvance(unsigned short unicode, unsigned short next)
 #ifdef KERNING
     if (next) adv += font()->kerning(unicode, next);
 #endif
+    /* The user's letter/word spacing (core options vnovel_font_letter_spacing /
+     * vnovel_font_word_spacing), added HERE and nowhere else, because this one
+     * function is what the drawing loop advances the cursor by AND what
+     * measureRunWidthPx sums for the total-fit planner: adding it in the single
+     * shared place is what makes the wrap plan and the drawn line agree by
+     * construction (see font_options.h).
+     *
+     * The em is the font's own pixel size (Fontinfo::doSize sets it), which is
+     * this engine's unit of "one character is this big" — the very number its
+     * advance() and line_space() derive from — so a setting reads the same
+     * whatever the face and the size scale are.
+     *
+     * Letter spacing follows every character; word spacing only a space, on top
+     * of the letter spacing that space already got. Both are 0 at the defaults,
+     * so nothing is added then. */
+    if (vnovel_font_letter_spacing != 0 || vnovel_font_word_spacing != 0)
+    {
+        const int em = size();
+        adv += (float)vnovel_font_spacing_px(vnovel_font_letter_spacing, em);
+        if (unicode == ' ')
+            adv += (float)vnovel_font_spacing_px(vnovel_font_word_spacing, em);
+    }
     return adv + float(pitch_x);
 }
 
@@ -491,4 +547,59 @@ int Fontinfo::doSize()
     const int sz = size();
     font()->set_size(sz);
     return sz;
+}
+
+
+void Fontinfo::captureUnscaledGeometry()
+{
+    /* Not behind __LIBRETRO__: it only copies a number, and keeping it
+     * unconditional means the refresh path is identical in both builds. */
+    unscaled_font_size = font_size;
+}
+
+void Fontinfo::applyUserFontScale()
+{
+#ifdef __LIBRETRO__
+    /* The user's scale is the percentage, read through the same clamp the rest
+     * of the core uses: vnovel_font_scaled_size(100) is the clamped value. */
+    int pct = vnovel_font_scaled_size(100);
+    if (pct == 100) { font_size = unscaled_font_size; return; }
+    if (pct < 1) pct = 1;
+
+    /* Only the SIZE is scaled, unlike ONScripter-EN where the cell grid had to
+     * move with it. This engine lays text out in float pixels against a window
+     * the script fixed (area_x/area_y), and its advance, line pitch, ascent and
+     * wrapping all derive from this size on demand (GlyphAdvance, line_space,
+     * doSize) — so one scaled number moves the whole layout consistently, and
+     * the window keeps the size the script gave it. That is also what keeps the
+     * total-fit planner right: it measures with GlyphAdvance against area_x,
+     * both of which follow this value.
+     *
+     * Derived from the RECORDED BASE, so this is idempotent — calling it twice
+     * at 150% gives 150%, not 225%, which is what makes a mid-game refresh safe.
+     * A script-relative modifier (the inline size codes) is a percentage of the
+     * base and is applied on top, so it does not need scaling here. */
+    font_size = unscaled_font_size;
+    if (font_size > 0)
+        font_size = font_size * pct / 100;
+    if (font_size < 1)
+        font_size = 1;
+#else
+    /* Standalone engine build: there is no option channel, so no scale. */
+#endif
+}
+
+void Fontinfo::refreshUserFontScale()
+{
+    /* Re-derive at the option's CURRENT value, at a sentence boundary the engine
+     * chose. A game sets its window once, so without this a mid-game change
+     * would never reach the layout at all. */
+    int before = size();
+    applyUserFontScale();
+    /* The font object caches its point size, so a changed size needs a fresh
+     * one or the glyphs keep the old size while the metrics move. Font::set_size
+     * (via doSize) is what re-points it; forcing it here by clearing the mod size
+     * leaves size() as the source of truth for the next doSize(). */
+    if (size() != before)
+        doSize();
 }

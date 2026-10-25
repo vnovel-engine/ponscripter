@@ -767,6 +767,12 @@ void PonscripterLabel::DoSetwindow(PonscripterLabel::WindowDef& def)
     sentence_font.wait_time = def.speed;
     sentence_font.is_bold   = def.bold;
     sentence_font.is_shadow = def.shadow;
+    /* The user's font-size scale (core option `vnovel_font_size`), applied to
+     * the size the script just set and before the window geometry below is
+     * derived from it. A no-op at 100%. The script's size is recorded first so
+     * a later refresh re-derives from it rather than compounding. */
+    sentence_font.captureUnscaledGeometry();
+    sentence_font.applyUserFontScale();
 
     dirty_rect.add(sentence_font_info.pos);
     float r = float(screen_ratio1) / float(screen_ratio2);

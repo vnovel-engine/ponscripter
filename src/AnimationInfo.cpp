@@ -32,6 +32,7 @@
 #include "BaseReader.h"
 
 #include "graphics_common.h"
+#include "vnovel_font_api.h"
 
 #if defined(USE_X86_GFX)
 #include "graphics_mmx.h"
@@ -671,8 +672,20 @@ void AnimationInfo::blendText( SDL_Surface *surface, int dst_x, int dst_y,
 
     /* ---------------------------------------- */
 
-    SDL_LockSurface(surface);
-    SDL_LockSurface(image_surface);
+    SDL_LockSurface( surface );
+    SDL_LockSurface( image_surface );
+
+    /* The user's tint (core option `vnovel_font_tint`), applied where this
+     * engine packs the colour into its blend words — the one place every glyph
+     * blend of this kind passes through. A no-op at 100/100/100. */
+    {
+        unsigned int tinted = vnovel_font_tint_rgb(
+            ((unsigned int)color.r << 16) | ((unsigned int)color.g << 8) |
+            (unsigned int)color.b);
+        color.r = (unsigned char)((tinted >> 16) & 0xff);
+        color.g = (unsigned char)((tinted >> 8) & 0xff);
+        color.b = (unsigned char)(tinted & 0xff);
+    }
 
 #ifdef BPP16
     int total_width = image_surface->pitch / 2;

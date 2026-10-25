@@ -42,6 +42,12 @@ class Fontinfo {
     float indent;
     float pos_x; int pos_y; // Current position
     int   font_size, font_size_mod;
+    /* The script's own size, before the user's scale (core option
+     * `vnovel_font_size`) is applied. Kept so the scale can be re-applied at a
+     * changed percentage without compounding — font_size is multiplied in place
+     * by applyUserFontScale, so applying twice at 150% would give 225%. This is
+     * what refreshUserFontScale derives from. */
+    int   unscaled_font_size;
     bool  is_vertical, is_bidirect;
 public:
     static int default_encoding;
@@ -117,6 +123,20 @@ public:
     void addShadeArea(SDL_Rect &rect, int shade_distance[2]);
 
     int doSize();
+    /* Apply the user's font-size scale (core option `vnovel_font_size`) to the
+     * size the script just set, so the drawn glyphs, the advance, the line
+     * pitch and the wrapping plan all come from one scaled number. A strict
+     * no-op at 100%, which is the default. See Fontinfo.cpp. */
+    void applyUserFontScale();
+    /* Record the script's current size as the unscaled base. Every place the
+     * script sets font_size must call this immediately after, so
+     * applyUserFontScale (now, and at any later refresh) derives from the
+     * script's number rather than its own previous output. */
+    void captureUnscaledGeometry();
+    /* Re-derive font_size from the recorded base and the CURRENT font-size
+     * option, and drop the cached font if the size changed. Called by the engine
+     * at a sentence boundary when the core signals a change. */
+    void refreshUserFontScale();
 };
 
 #endif // __FONT_INFO_H__

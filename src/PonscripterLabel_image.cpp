@@ -27,6 +27,7 @@
 #include <cstdio>
 
 #include "graphics_common.h"
+#include "vnovel_font_api.h"
 
 SDL_Surface *PonscripterLabel::loadImage(const pstring& filename,
                                         bool *has_alpha)
@@ -347,6 +348,18 @@ void PonscripterLabel::alphaBlendText(SDL_Surface *dst_surface, SDL_Rect dst_rec
 
     SDL_LockSurface( dst_surface );
     SDL_LockSurface( txt_surface );
+
+    /* The user's tint (core option `vnovel_font_tint`), applied where this
+     * engine packs the colour into its blend words — the one place every glyph
+     * blend of this kind passes through. A no-op at 100/100/100. */
+    {
+        unsigned int tinted = vnovel_font_tint_rgb(
+            ((unsigned int)color.r << 16) | ((unsigned int)color.g << 8) |
+            (unsigned int)color.b);
+        color.r = (unsigned char)((tinted >> 16) & 0xff);
+        color.g = (unsigned char)((tinted >> 8) & 0xff);
+        color.b = (unsigned char)(tinted & 0xff);
+    }
 
 #ifdef BPP16
     Uint32 src_color = ((color.r >> RLOSS) << RSHIFT) |

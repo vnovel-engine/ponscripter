@@ -49,6 +49,10 @@
  * compiles to nothing there. */
 #ifdef __LIBRETRO__
 #include "engine_bridge.h"
+/* The user's font options (the size refresh flag the boundary below consults).
+ * Included unconditionally outside the bridge guard, because a standalone engine
+ * build still compiles this file and gets the inline no-op fallbacks. */
+#include "vnovel_font_api.h"
 
 /* The publishers and kinds: the header above supplies them when it is
  * included (real prototypes, or inline no-ops without VNOVEL_DEVWIRE), so this
@@ -563,6 +567,14 @@ int PonscripterLabel::clickNewPage(bool display_char)
 
 int PonscripterLabel::textCommand()
 {
+    /* A mid-game Font Size change, applied at a sentence boundary. The frame
+     * loop has no layout hook, and a game sets its window once, so the setup
+     * path that applies the scale never runs again — see the ONS equivalent. */
+    if (vnovel_font_scale_refresh_requested) {
+        vnovel_font_scale_refresh_requested = 0;
+        sentence_font.refreshUserFontScale();
+    }
+
     if (pretextgosub_label
         && (line_enter_status == 0
             || (line_enter_status == 1

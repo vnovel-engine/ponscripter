@@ -1222,6 +1222,12 @@ void PonscripterLabel::resetSentenceFont()
     sentence_font.top_y = 16;
     sentence_font.pitch_x = 0;
     sentence_font.pitch_y = 2;
+    /* The user's font-size scale (core option `vnovel_font_size`), before the
+     * default window is derived from the size below, so a game that never sets
+     * a window still honours the option. A no-op at 100%. Recorded first so a
+     * later refresh re-derives from the script's size, not from its own output. */
+    sentence_font.captureUnscaledGeometry();
+    sentence_font.applyUserFontScale();
     sentence_font.area_x = 23 * (sentence_font.size() + sentence_font.pitch_x);
     sentence_font.area_y = 16 * (sentence_font.size() + sentence_font.pitch_y);
     sentence_font.wait_time = 20;

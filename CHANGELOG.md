@@ -15,6 +15,18 @@ It is consumed by the [vnovel](https://gitlab.com/matchaxnb/vnovel) libretro
 core as one of its engines.
 
 
+## User font selection (2026-10-26)
+
+- The core's font options reach the engine through the bridge: a face the user
+  chose is opened in place of the game's own (falling back to it, logged, when
+  the face is unreadable), the size the script asks for is scaled, letter and
+  word spacing ride through the same per-character fold the layout and the
+  total-fit planner share, and the tint is applied where a glyph is blended.
+  At the defaults nothing changes.
+- The scale is re-derived from the script's own geometry rather than multiplied
+  in place, so it is idempotent: a changed size can be re-applied at the next
+  sentence boundary, and turned back down again.
+
 ## libretro integration
 
 - `__LIBRETRO__` guard with `libretro_script_error_longjmp()` to catch `exit()`
