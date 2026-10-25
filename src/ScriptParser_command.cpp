@@ -337,12 +337,10 @@ int ScriptParser::rmenuCommand(const pstring& cmd)
  *   resetmenu + insertmenu            the game's OWN menu, a menubar built entry
  *                                     by entry
  *
- * Le sanglot uses both, in that order: `rmenu` at line 90 declares its six
- * right-click entries, and `resetmenu` at line 93 then announces the custom menu
- * and 23 `insertmenu`s follow. Reading resetmenu as "clear the right-click menu"
- * is what previously made us wipe those six entries and put the 23 configuration
- * entries in their place -- so a right-click showed a flattened, reversed copy of
- * the wrong list. `resetmenu` touches only this menu; see resetmenuCommand.
+ * `resetmenu` touches only this custom menu, not the right-click one (which
+ * `rmenu` set and keeps); see resetmenuCommand. Treating `resetmenu` as a clear
+ * of the right-click menu would wipe those entries and put the configuration
+ * entries in their place.
  *
  * The optional third argument is a SUBMENU DEPTH, in the sense the script's own
  * comment gives: "数字がある場合、それはその数だけ掘ったサブメニューへの挿入を意

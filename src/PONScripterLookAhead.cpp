@@ -33,18 +33,16 @@ struct PonPolicy
     }
     /* PONScripter decodes its script with the global `file_encoding`, chosen
      * from the script's own marker (UTF-8 or CP932), and its DecodeChar is what
-     * the engine uses to rasterize. Using anything else -- the walk once used
-     * Shift_JIS unconditionally -- mangles every non-ASCII letter: Le sanglot's
-     * French arrived as `derni?re` for `dernière`. DecodeChar also reports how
-     * many bytes the character occupied, which the walk needs to advance.
+     * the engine uses to rasterize. Using anything else (e.g. Shift_JIS
+     * unconditionally) mangles every non-ASCII letter. DecodeChar also reports
+     * how many bytes the character occupied, which the walk needs to advance.
      *
      * DecodeWithLigatures, not DecodeChar, because that is what the RENDERER
      * uses and the two differ on exactly the multi-byte sequences the reader
      * sees. PONScripter's ligature table maps `%.` to a thin space (U+2009),
      * `%_` to a no-break space and `%-` to a non-breaking hyphen
-     * (encoding.cpp:150-152), so a page rendered by the engine shows a thin space
-     * where the walk published the literal three characters `%.` -- measured on
-     * Le sanglot, whose dialogue arrived as `Qu'est%-ce que tu en dis%.?`. The
+     * (encoding.cpp:150-152); using DecodeChar would publish the literal
+     * three characters `%.` instead of the thin space the engine renders. The
      * ligature form is also the only one that can report a MULTI-character
      * sequence's byte length, which the walk needs to step over it at all.
      *

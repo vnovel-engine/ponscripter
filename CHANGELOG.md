@@ -68,6 +68,9 @@ core as one of its engines.
 ## Diagnostics
 
 - Debug mode logs the full script line including its arguments.
+- The AVI decoder's stream dumps are gated on the core's debug mask (the
+  `pons:avi` bit) instead of an argument passed `false` at its only call site,
+  which made them unreachable. A standalone build reads the bit as off.
 
 ## License
 

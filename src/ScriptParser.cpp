@@ -138,8 +138,7 @@ func_lut_t::func_lut_t() {
     dict["pretextgosub"]    = &ScriptParser::pretextgosubCommand;
     dict["return"]          = &ScriptParser::returnCommand;
     dict["rmenu"]           = &ScriptParser::rmenuCommand;
-    /* The menu built a piece at a time, which is what a real script uses (23
-     * calls in Le sanglot, against one `rmenu`). */
+    /* The menu built a piece at a time, which is what a real script uses. */
     dict["insertmenu"]      = &ScriptParser::insertmenuCommand;
     dict["resetmenu"]       = &ScriptParser::resetmenuCommand;
     dict["roff"]            = &ScriptParser::roffCommand;
@@ -697,13 +696,11 @@ void ScriptParser::writeStr(const pstring& s, bool output_flag)
 
 pstring ScriptParser::readStr()
 {
-    /* Bounds-checked like readInt() and readChar() below, which this was missing.
-     *
-     * Without the check a truncated or short `envdata` walks the read pointer off
-     * the buffer and the pstring constructor faults on the invalid address --
-     * measured as a segfault during PonscripterLabel::loadEnvData -> readStr,
-     * before any script ran. The neighbours already guard; this now matches them
-     * and returns an empty string at the end of the buffer instead. */
+    /* Bounds-checked like readInt() and readChar() below. Without the check a
+     * truncated or short `envdata` walks the read pointer off the buffer and
+     * the pstring constructor faults on the invalid address. The neighbours
+     * already guard; this matches them and returns an empty string at the end
+     * of the buffer instead. */
     if (file_io_buf_ptr >= file_io_buf_len)
         return pstring("");
 

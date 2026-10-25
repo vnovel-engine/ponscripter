@@ -207,7 +207,7 @@ public:
     /* Returns the CURRENT token buffer for reading only; the walk keeps its own
      * copy (see ONScripterLookAhead.h) rather than having this class hold one,
      * because an extra pstring member here double-frees in PONScripter's
-     * destructor (measured: abort in retro_unload_game). */
+     * destructor. */
     inline const char *getToken() { return (const char*)string_buffer; };
     inline int  getCmdType(){ return text_flag ? 1 : 0; };
     inline void setCmdType( int t ){ text_flag = (t != 0); };

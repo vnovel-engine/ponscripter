@@ -30,6 +30,14 @@
 
 #ifdef USE_AVIFILE
 #include "AVIWrapper.h"
+/* The debug mask's AVI bit. The core's headers are on the include path only in
+ * a libretro build; a standalone engine has no mask, where this reads as off. */
+#ifdef __LIBRETRO__
+#include "engine_debug.h"
+#define PONS_AVI_DEBUG PONS_DEBUG_ON(PONS_DEBUG_FLAG_AVI)
+#else
+#define PONS_AVI_DEBUG 0
+#endif
 #endif
 
 struct WAVE_HEADER {
@@ -650,7 +658,7 @@ void PonscripterLabel::playAVI(const pstring& filename, bool click_flag)
     if (audio_open_flag) Mix_CloseAudio();
 
     AVIWrapper* avi = new AVIWrapper();
-    if (avi->init(abs_fname, false) == 0
+    if (avi->init(abs_fname, PONS_AVI_DEBUG ? true : false) == 0
         && avi->initAV(screen_surface, audio_open_flag) == 0) {
         if (avi->play(click_flag)) endCommand();
     }
