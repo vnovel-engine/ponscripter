@@ -2736,9 +2736,15 @@ struct genBstrList g;
 #define START_VSNBUFF (256)
 #else
 
-#if defined(__GNUC__) && !defined(MACOSX)
+#if defined(__GNUC__) && !defined(MACOSX) && !defined(__APPLE__)
 /* Something is making gcc complain about this prototype not being here, so 
    I've just gone ahead and put it in. */
+/* __APPLE__ is part of the guard because the declaration is wrong there: the
+ * macOS SDK defines vsnprintf as a fortify macro, so this extern collides with
+ * it ("expected parameter declarator", "conflicting types for
+ * __builtin___vsnprintf_chk"). The original !MACOSX arm only catches builds
+ * that define MACOSX themselves, which clang does not — it defines __APPLE__,
+ * and __GNUC__ as well, so without this the Apple build is not excluded. */
 extern int vsnprintf (char *buf, size_t count, const char *format, va_list arg);
 #endif
 
